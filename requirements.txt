@@ -1,0 +1,9 @@
+openai
+pdfplumber
+pydantic
+python-dotenv
+requests
+openai==1.0.0
+reportlab
+streamlit
+pandas
