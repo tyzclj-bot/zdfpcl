@@ -94,3 +94,50 @@ class AIInvoiceExtractor:
         
         structured_data = self.parse_with_ai(raw_text)
         return structured_data.model_dump()
+
+    def extract_from_image(self, image_bytes: bytes) -> dict:
+        """使用多模态模型从图片中提取信息"""
+        import base64
+        logger.info("Processing image with vision model...")
+
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        schema = InvoiceData.model_json_schema()
+
+        prompt = f"""
+        你是一个专业的财务审计助手。请从这张发票图片中提取关键信息，并严格按照以下 JSON Schema 格式返回。
+        
+        JSON Schema:
+        {json.dumps(schema, indent=2)}
+        """
+
+        try:
+            response = self.client.chat.completions.create(
+                model="deepseek-vl-chat",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=3000,
+                temperature=0.1,
+            )
+            content = response.choices[0].message.content
+            # 模型返回的可能是包含 JSON 的 markdown 块，需要清理
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0]
+            
+            invoice_dict = json.loads(content)
+            validated_data = InvoiceData(**invoice_dict)
+            return validated_data.model_dump()
+        except Exception as e:
+            logger.error(f"AI vision processing failed: {e}")
+            raise

@@ -108,28 +108,37 @@ def main():
 
         with col1:
             st.subheader("1. Upload Invoice")
-            uploaded_file = st.file_uploader("Drop your PDF invoice here", type=["pdf"])
+            uploaded_file = st.file_uploader("Drop your invoice here (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
             
             if uploaded_file:
-                st.success("File uploaded successfully!")
+                # Display preview based on file type
+                file_type = uploaded_file.type
+                if "image" in file_type:
+                    st.image(uploaded_file, caption="Uploaded Image Preview", use_column_width=True)
+                else:
+                    st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
+
                 if st.button("Process with AI"):
-                    with st.spinner("Analyzing document structure..."):
+                    with st.spinner("🤖 AI is analyzing your document..."):
                         try:
-                            # Save temp file
-                            with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                                tmp.write(uploaded_file.getvalue())
-                                tmp_path = tmp.name
-                            
-                            # Process
                             extractor = AIInvoiceExtractor()
-                            data = extractor.process_pdf(tmp_path)
+                            file_bytes = uploaded_file.getvalue()
+                            
+                            if "image" in uploaded_file.type:
+                                data = extractor.extract_from_image(file_bytes)
+                            else: # It's a PDF
+                                with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                                    tmp.write(file_bytes)
+                                    tmp_path = tmp.name
+                                
+                                data = extractor.process_pdf(tmp_path)
+                                os.unlink(tmp_path)
+
                             st.session_state['invoice_data'] = data
                             st.session_state['processed'] = True
-                            
-                            # Cleanup
-                            os.unlink(tmp_path)
+                            st.rerun() # Rerun to update the UI smoothly
                         except Exception as e:
-                            st.error(f"Processing failed: {str(e)}")
+                            st.error(f"An error occurred during processing: {str(e)}")
 
         with col2:
             st.subheader("2. Extraction Results")
