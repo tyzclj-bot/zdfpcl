@@ -80,6 +80,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+@st.cache_resource
+def get_extractor():
+    """使用 Streamlit 缓存来创建并复用 AI 提取器实例"""
+    return AIInvoiceExtractor()
+
 # --- App Logic ---
 def main():
     # Header Section
@@ -127,9 +132,9 @@ def main():
                     st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
 
                 if st.button("🤖 Process with AI"):
+                    extractor = get_extractor() # 获取缓存的实例
                     with st.spinner("🤖 AI is analyzing your document..."):
                         try:
-                            extractor = AIInvoiceExtractor()
                             file_bytes = uploaded_file.getvalue()
                             
                             if "image" in uploaded_file.type:

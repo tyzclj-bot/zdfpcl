@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 from openai import OpenAI
 import httpx
 import config
+import os
+import requests # 引入 requests 库
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +29,8 @@ class InvoiceData(BaseModel):
 
 class AIInvoiceExtractor:
     def __init__(self):
-        # 通过传入一个空的 httpx.Client 来强制禁用任何系统级的代理设置
-        self.client = OpenAI(
-            api_key=config.DEEPSEEK_API_KEY,
-            base_url=config.DEEPSEEK_BASE_URL,
-            http_client=httpx.Client(proxies={})
-        )
+        # 保留一个空的初始化，因为我们将手动处理请求
+        pass
 
     def extract_text_from_pdf(self, pdf_path: str) -> str:
         """从 PDF 中提取所有文字"""
@@ -51,7 +49,6 @@ class AIInvoiceExtractor:
     def parse_with_ai(self, text: str) -> InvoiceData:
         """使用 DeepSeek 将非结构化文本转换为结构化 JSON"""
         
-        # 获取 Pydantic 模型的 JSON Schema，用于提示模型
         schema = InvoiceData.model_json_schema()
         
         prompt = f"""
@@ -67,18 +64,26 @@ class AIInvoiceExtractor:
         """
 
         try:
-            response = self.client.chat.completions.create(
-                model="deepseek-chat", 
-                messages=[
+            # 手动构造请求
+            headers = {
+                "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [
                     {"role": "system", "content": "你是一个只输出结构化 JSON 的财务助手。请直接输出 JSON，不要包含 markdown 格式标记 (如 ```json ... ```)。"},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
-                temperature=0.1
-            )
+                "response_format": {"type": "json_object"},
+                "temperature": 0.1
+            }
             
-            content = response.choices[0].message.content
-            # 清理可能的 markdown 标记
+            response = requests.post(f"{config.DEEPSEEK_BASE_URL}/chat/completions", headers=headers, json=payload)
+            response.raise_for_status()
+            response_json = response.json()
+            
+            content = response_json['choices'][0]['message']['content']
             content = content.replace("```json", "").replace("```", "").strip()
             
             invoice_dict = json.loads(content)
@@ -121,57 +126,25 @@ class AIInvoiceExtractor:
                 }
             ]
 
-            response = self.client.chat.completions.create(
-                model="deepseek-vl-chat",
-                messages=messages,
-                max_tokens=2000,
-                temperature=0.1,
-            )
-            content = response.choices[0].message.content
+            # 手动构造请求
+            headers = {
+                "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "deepseek-vl-chat",
+                "messages": messages,
+                "max_tokens": 2000,
+                "temperature": 0.1
+            }
+
+            response = requests.post(f"{config.DEEPSEEK_BASE_URL}/chat/completions", headers=headers, json=payload)
+            response.raise_for_status()
+            response_json = response.json()
+
+            content = response_json['choices'][0]['message']['content']
             
-            # 在诊断模式下，我们返回一个包含描述的简单字典
             return {"diagnostic_description": content}
         except Exception as e:
             logger.error(f"AI vision processing failed: {e}")
-            # 返回一个包含错误信息的字典，以便在 UI 上显示
             return {"error": str(e)}
-        logger.info("Processing image with vision model...")
-
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-        schema = InvoiceData.model_json_schema()
-
-        prompt = "Describe the image in detail."
-
-        try:
-            # 构造适用于 DeepSeek Vision API 的消息格式
-            messages = [
-                {
-                    'role': 'user',
-                    'content': [
-                        {
-                            'type': 'text',
-                            'text': prompt
-                        },
-                        {
-                            'type': 'image_url',
-                            'image_url': {
-                                'url': f"data:image/jpeg;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ]
-
-            response = self.client.chat.completions.create(
-                model="deepseek-vl-chat",
-                messages=messages,
-                max_tokens=3000,
-                temperature=0.1,
-            )
-            content = response.choices[0].message.content
-            
-            # 对于这个简单的测试，我们只返回一个包含描述的字典
-            return {"description": content}
-        except Exception as e:
-            logger.error(f"AI vision processing failed: {e}")
-            raise
