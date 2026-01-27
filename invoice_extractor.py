@@ -3,8 +3,6 @@ import json
 import logging
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from openai import OpenAI
-import httpx
 import config
 import os
 import requests # 引入 requests 库
@@ -103,48 +101,43 @@ class AIInvoiceExtractor:
         return structured_data.model_dump()
 
     def extract_from_image(self, image_bytes: bytes) -> dict:
-        """使用多模态模型从图片中提取信息（诊断模式）"""
-        import base64
-        logger.info("Processing image with vision model in diagnostic mode...")
-
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-        prompt = "Describe the image in as much detail as possible."
+        """
+        使用 EasyOCR 从图片中提取文字，然后发送给 DeepSeek 进行结构化处理。
+        """
+        logger.info("Starting OCR processing for image...")
+        try:
+            import easyocr
+            import numpy as np
+            import cv2
+        except ImportError:
+            return {
+                "error": "缺少必要的 OCR 库。请在终端运行: pip install easyocr opencv-python-headless"
+            }
 
         try:
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ]
-
-            # 手动构造请求
-            headers = {
-                "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "deepseek-vl-chat",
-                "messages": messages,
-                "max_tokens": 2000,
-                "temperature": 0.1
-            }
-
-            response = requests.post(f"{config.DEEPSEEK_BASE_URL}/chat/completions", headers=headers, json=payload)
-            response.raise_for_status()
-            response_json = response.json()
-
-            content = response_json['choices'][0]['message']['content']
+            # 1. 将图片字节流转换为 OpenCV 格式
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
-            return {"diagnostic_description": content}
+            if img is None:
+                return {"error": "无法解码图像文件"}
+
+            # 2. 初始化 EasyOCR (支持中文和英文)
+            # 注意：第一次运行会下载模型，可能需要一点时间
+            reader = easyocr.Reader(['ch_sim', 'en'], gpu=False) 
+            
+            # 3. 提取文字
+            result = reader.readtext(img, detail=0)
+            text = "\n".join(result)
+            
+            logger.info(f"OCR extracted {len(text)} characters.")
+            
+            if not text.strip():
+                return {"error": "OCR 未能从图片中识别出任何文字。"}
+
+            # 4. 发送给 DeepSeek 进行结构化
+            return self.parse_with_ai(text)
+
         except Exception as e:
-            logger.error(f"AI vision processing failed: {e}")
-            return {"error": str(e)}
+            logger.error(f"OCR processing failed: {e}")
+            return {"error": f"图片识别失败: {str(e)}"}

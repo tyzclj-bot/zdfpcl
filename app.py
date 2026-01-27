@@ -147,13 +147,17 @@ def main():
                                 data = extractor.process_pdf(tmp_path)
                                 os.unlink(tmp_path)
 
-                            # 检查是否有错误从提取器返回
-                            if data.get("error"):
+                            # 检查返回数据的类型
+                            if isinstance(data, dict) and data.get("error"):
                                 st.error(f"AI Processing Error: {data['error']}")
                                 # 清除旧数据（如有）
                                 if 'invoice_data' in st.session_state:
                                     del st.session_state['invoice_data']
                             else:
+                                # 如果是 Pydantic 对象，转换为字典以便存储和显示
+                                if not isinstance(data, dict):
+                                    data = data.model_dump()
+                                
                                 st.session_state['invoice_data'] = data
                                 st.session_state['processed'] = True
                             
