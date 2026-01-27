@@ -142,9 +142,17 @@ def main():
                                 data = extractor.process_pdf(tmp_path)
                                 os.unlink(tmp_path)
 
-                            st.session_state['invoice_data'] = data
-                            st.session_state['processed'] = True
-                            st.rerun() # Rerun to update the UI smoothly
+                            # 检查是否有错误从提取器返回
+                            if data.get("error"):
+                                st.error(f"AI Processing Error: {data['error']}")
+                                # 清除旧数据（如有）
+                                if 'invoice_data' in st.session_state:
+                                    del st.session_state['invoice_data']
+                            else:
+                                st.session_state['invoice_data'] = data
+                                st.session_state['processed'] = True
+                            
+                            st.rerun()
                         except Exception as e:
                             st.error(f"An error occurred during processing: {str(e)}")
 
@@ -153,7 +161,14 @@ def main():
             
             if 'invoice_data' in st.session_state:
                 data = st.session_state['invoice_data']
-                
+
+                # 如果是诊断模式的结果，则特殊显示
+                if "diagnostic_description" in data:
+                    st.subheader("AI Vision Diagnostic Report")
+                    st.markdown(data["diagnostic_description"])
+                    st.info("This is a diagnostic run. We are checking the connection to the vision model.")
+                    return # 结束渲染，不显示下面的常规结果
+
                 # Key Metrics Row
                 m1, m2, m3 = st.columns(3)
                 with m1:

@@ -29,7 +29,7 @@ class AIInvoiceExtractor:
         # 确保只使用明确的参数初始化客户端，避免任何隐式代理设置
         self.client = OpenAI(
             api_key=config.DEEPSEEK_API_KEY,
-            base_url=config.DEEPSEEK_BASE_URL
+            base_url=config.DEEPSEEK_BASE_URL,
         )
 
     def extract_text_from_pdf(self, pdf_path: str) -> str:
@@ -96,8 +96,43 @@ class AIInvoiceExtractor:
         return structured_data.model_dump()
 
     def extract_from_image(self, image_bytes: bytes) -> dict:
-        """使用多模态模型从图片中提取信息"""
+        """使用多模态模型从图片中提取信息（诊断模式）"""
         import base64
+        logger.info("Processing image with vision model in diagnostic mode...")
+
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        prompt = "Describe the image in as much detail as possible."
+
+        try:
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ]
+
+            response = self.client.chat.completions.create(
+                model="deepseek-vl-chat",
+                messages=messages,
+                max_tokens=2000,
+                temperature=0.1,
+            )
+            content = response.choices[0].message.content
+            
+            # 在诊断模式下，我们返回一个包含描述的简单字典
+            return {"diagnostic_description": content}
+        except Exception as e:
+            logger.error(f"AI vision processing failed: {e}")
+            # 返回一个包含错误信息的字典，以便在 UI 上显示
+            return {"error": str(e)}
         logger.info("Processing image with vision model...")
 
         base64_image = base64.b64encode(image_bytes).decode('utf-8')
