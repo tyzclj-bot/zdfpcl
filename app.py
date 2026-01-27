@@ -127,7 +127,7 @@ def main():
                 # Display preview based on file type
                 file_type = uploaded_file.type
                 if "image" in file_type:
-                    st.image(uploaded_file, caption="Uploaded Image Preview", use_column_width=True)
+                    st.image(uploaded_file, caption="Uploaded Image Preview", width=400)
                 else:
                     st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
 
