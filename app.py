@@ -41,6 +41,14 @@ st.markdown("""
     .stButton>button:hover {
         background-color: #4338ca;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        transform: scale(1.02);
+    }
+
+    /* Style for the main action button */
+    .st-emotion-cache-19n6bn1 {
+        background-image: linear-gradient(to right, #4f46e5, #7c3aed);
+        font-size: 1.1rem;
+        font-weight: 700;
     }
     
     .upload-card {
@@ -118,7 +126,7 @@ def main():
                 else:
                     st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
 
-                if st.button("Process with AI"):
+                if st.button("🤖 Process with AI"):
                     with st.spinner("🤖 AI is analyzing your document..."):
                         try:
                             extractor = AIInvoiceExtractor()

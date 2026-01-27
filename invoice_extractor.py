@@ -26,7 +26,7 @@ class InvoiceData(BaseModel):
 
 class AIInvoiceExtractor:
     def __init__(self):
-        # 使用 DeepSeek 配置初始化 OpenAI 客户端
+        # 确保只使用明确的参数初始化客户端，避免任何隐式代理设置
         self.client = OpenAI(
             api_key=config.DEEPSEEK_API_KEY,
             base_url=config.DEEPSEEK_BASE_URL
