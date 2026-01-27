@@ -4,6 +4,7 @@ import logging
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from openai import OpenAI
+import httpx
 import config
 
 logger = logging.getLogger(__name__)
@@ -26,10 +27,11 @@ class InvoiceData(BaseModel):
 
 class AIInvoiceExtractor:
     def __init__(self):
-        # 确保只使用明确的参数初始化客户端，避免任何隐式代理设置
+        # 通过传入一个空的 httpx.Client 来强制禁用任何系统级的代理设置
         self.client = OpenAI(
             api_key=config.DEEPSEEK_API_KEY,
             base_url=config.DEEPSEEK_BASE_URL,
+            http_client=httpx.Client(proxies={})
         )
 
     def extract_text_from_pdf(self, pdf_path: str) -> str:
