@@ -1,10 +1,13 @@
+
 import streamlit as st
 import pandas as pd
 import json
 import os
 import io
+import time
 from invoice_extractor import AIInvoiceExtractor
 from quickbooks_adapter import QuickBooksAdapter
+from supabase_manager import SupabaseManager
 from tempfile import NamedTemporaryFile
 
 # --- Page Configuration ---
@@ -12,7 +15,7 @@ st.set_page_config(
     page_title="AI Invoice Intelligence",
     page_icon="🧾",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # --- Custom Styling (Modern Western Aesthetic) ---
@@ -86,6 +89,22 @@ def get_extractor():
     """使用 Streamlit 缓存来创建并复用 AI 提取器实例"""
     return AIInvoiceExtractor()
 
+def init_supabase():
+    """Initialize Supabase Client from Env or Session State"""
+    # Check if keys are in env
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+    
+    # Or check if they were entered in UI
+    if not url and 'supabase_url' in st.session_state:
+        url = st.session_state.supabase_url
+    if not key and 'supabase_key' in st.session_state:
+        key = st.session_state.supabase_key
+        
+    if url and key:
+        return SupabaseManager(url, key)
+    return None
+
 # --- App Logic ---
 def main():
     # Header Section
@@ -93,30 +112,91 @@ def main():
     st.markdown("<p style='color: #64748b; font-size: 1.1rem;'>AI-Powered Invoice Extraction & ERP Synchronization</p>", unsafe_allow_html=True)
     st.divider()
 
-    # --- Authorization Logic ---
-    auth_code = "tang888"
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
+    # --- Session State Init ---
+    if 'user' not in st.session_state:
+        st.session_state.user = None
+    if 'access_token' not in st.session_state:
+        st.session_state.access_token = None
+    if 'credits' not in st.session_state:
+        st.session_state.credits = 0
 
+    # --- Sidebar: Auth & Settings ---
     with st.sidebar:
         st.header("Authorization")
-        user_code = st.text_input("请输入授权码", type="password")
         
-        if user_code == auth_code:
-            st.session_state.authenticated = True
-            st.toast("授权成功！", icon="✅")
-        elif user_code:
-            st.error("授权码错误")
+        supabase = init_supabase()
+        
+        if not supabase:
+            st.warning("Please configure Supabase credentials.")
+            st.session_state.supabase_url = st.text_input("Supabase URL", placeholder="https://xyz.supabase.co")
+            st.session_state.supabase_key = st.text_input("Supabase Anon Key", type="password")
+            if st.button("Save Configuration"):
+                st.rerun()
+        else:
+            # If User is Logged In
+            if st.session_state.user:
+                st.success(f"Welcome, {st.session_state.user.email}")
+                
+                # Fetch fresh credits
+                current_credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
+                st.session_state.credits = current_credits
+                
+                st.metric("Credits Remaining", current_credits)
+                
+                if current_credits <= 0:
+                    st.error("Please Upgrade Plan")
+                
+                if st.button("Logout"):
+                    supabase.sign_out()
+                    st.session_state.user = None
+                    st.session_state.access_token = None
+                    st.session_state.credits = 0
+                    st.rerun()
+            else:
+                # Login / Register Tabs
+                tab_login, tab_signup = st.tabs(["Login", "Register"])
+                
+                with tab_login:
+                    email = st.text_input("Email", key="login_email")
+                    password = st.text_input("Password", type="password", key="login_pass")
+                    if st.button("Sign In"):
+                        try:
+                            res = supabase.sign_in(email, password)
+                            if res and res.user:
+                                st.session_state.user = res.user
+                                st.session_state.access_token = res.session.access_token
+                                st.success("Logged in successfully!")
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"Login failed: {str(e)}")
+                
+                with tab_signup:
+                    s_email = st.text_input("Email", key="signup_email")
+                    s_password = st.text_input("Password", type="password", key="signup_pass")
+                    if st.button("Sign Up"):
+                        try:
+                            res = supabase.sign_up(s_email, s_password)
+                            if res and res.user:
+                                st.success("Signup successful! Please check your email for confirmation (if enabled) or login.")
+                                # Auto login if session provided
+                                if res.session:
+                                    st.session_state.user = res.user
+                                    st.session_state.access_token = res.session.access_token
+                                    st.rerun()
+                        except Exception as e:
+                            st.error(f"Signup failed: {str(e)}")
 
         st.divider()
-        st.header("Settings")
-        st.info("Using DeepSeek-V3 Engine")
-        if st.button("Clear Cache"):
-            st.session_state.clear()
-            st.rerun()
+        st.info("System Status: Online")
 
     # --- Main App Display ---
-    if st.session_state.authenticated:
+    if st.session_state.user:
+        # Check Credits Logic
+        if st.session_state.credits <= 0:
+            st.warning("⚠️ You have 0 credits remaining. Please upgrade your plan to continue parsing invoices.")
+            st.info("New users get 5 free credits.")
+            return
+
         # Main Layout: Upload and Processing
         col1, col2 = st.columns([1, 2], gap="large")
 
@@ -133,6 +213,14 @@ def main():
                     st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
 
                 if st.button("🤖 Process with AI"):
+                    # Double check credits before processing
+                    supabase = init_supabase()
+                    credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
+                    
+                    if credits <= 0:
+                        st.error("Insufficient credits!")
+                        return
+
                     extractor = get_extractor() # 获取缓存的实例
                     with st.spinner("🤖 AI is analyzing your document..."):
                         try:
@@ -161,6 +249,16 @@ def main():
                                 
                                 st.session_state['invoice_data'] = data
                                 st.session_state['processed'] = True
+                                
+                                # --- SUCCESS: Deduct Credit & Log History ---
+                                try:
+                                    supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                    supabase.log_invoice(st.session_state.user.id, data, st.session_state.access_token)
+                                    st.toast("Credits deducted: -1", icon="💳")
+                                    # Update local state to reflect change immediately
+                                    st.session_state.credits -= 1
+                                except Exception as db_err:
+                                    st.warning(f"Result processed but failed to update DB: {db_err}")
                             
                             st.rerun()
                         except Exception as e:
@@ -253,8 +351,14 @@ def main():
                 st.info("Upload and process an invoice to see results here.")
                 # Placeholder image or illustration could go here
     else:
-        st.warning("请在左侧侧边栏输入授权码以解锁应用。")
-        st.info("如无授权码，请联系管理员获取。")
+        # Not logged in
+        st.markdown("""
+        <div style="text-align: center; padding: 50px;">
+            <h2>👋 Welcome to Invoice Intelligence</h2>
+            <p>Please log in or register via the sidebar to start processing invoices.</p>
+            <p>New users get <b>5 free credits</b>!</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
