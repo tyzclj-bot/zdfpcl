@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import io
 from invoice_extractor import AIInvoiceExtractor
 from quickbooks_adapter import QuickBooksAdapter
 from tempfile import NamedTemporaryFile
@@ -205,7 +206,12 @@ def main():
                 
                 # Action Section
                 st.subheader("3. Export & Sync")
-                c1, c2 = st.columns(2)
+                
+                # Prepare data for export
+                items_data = data.get('items', [])
+                df_export = pd.DataFrame(items_data) if items_data else pd.DataFrame()
+
+                c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     if st.button("🚀 Sync to QuickBooks"):
                         with st.spinner("Connecting to QuickBooks Online..."):
@@ -213,7 +219,29 @@ def main():
                             if qb.sync_invoice(data):
                                 st.toast("Successfully synced to QuickBooks!", icon="✅")
                                 st.success("Synchronized with ERP system.")
+                
                 with c2:
+                    csv = df_export.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📄 Download CSV",
+                        data=csv,
+                        file_name=f"invoice_{data.get('invoice_number', 'export')}.csv",
+                        mime="text/csv"
+                    )
+
+                with c3:
+                    buffer = io.BytesIO()
+                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                        df_export.to_excel(writer, index=False, sheet_name='Invoice')
+                    
+                    st.download_button(
+                        label="📊 Download Excel",
+                        data=buffer.getvalue(),
+                        file_name=f"invoice_{data.get('invoice_number', 'export')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+                with c4:
                     json_str = json.dumps(data, indent=4, ensure_ascii=False)
                     st.download_button(
                         label="📥 Download JSON",
