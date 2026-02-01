@@ -5,6 +5,11 @@ import json
 import os
 import io
 import time
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 from invoice_extractor import AIInvoiceExtractor
 from quickbooks_adapter import QuickBooksAdapter
 from supabase_manager import SupabaseManager
