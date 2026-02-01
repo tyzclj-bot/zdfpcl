@@ -147,7 +147,7 @@ def main():
                     st.error("Please Upgrade Plan")
                 
                 if st.button("Logout"):
-                    supabase.sign_out()
+                    supabase.sign_out(st.session_state.access_token)
                     st.session_state.user = None
                     st.session_state.access_token = None
                     st.session_state.credits = 0

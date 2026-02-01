@@ -1,93 +1,113 @@
 
-import os
-from gotrue import SyncGoTrueClient
-from postgrest import SyncPostgrestClient
+import requests
+import json
 
 class SupabaseManager:
     def __init__(self, url: str, key: str):
-        self.url = url
+        self.url = url.rstrip('/')
         self.key = key
         self.headers = {
             "apikey": key,
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json"
         }
-        
-        # Initialize Auth Client
-        self.auth = SyncGoTrueClient(
-            url=f"{url}/auth/v1",
-            headers=self.headers,
-            storage_key="supabase.auth.token"
-        )
 
-    def get_db_client(self, access_token=None):
-        """
-        Get a Postgrest client. 
-        If access_token is provided, use it for Authorization (RLS).
-        Otherwise, use the anon key.
-        """
+    def _get_headers(self, access_token=None):
         headers = self.headers.copy()
         if access_token:
             headers["Authorization"] = f"Bearer {access_token}"
-            
-        return SyncPostgrestClient(
-            base_url=f"{self.url}/rest/v1",
-            headers=headers
-        )
+        return headers
 
     def sign_up(self, email, password):
-        return self.auth.sign_up({
-            "email": email, 
-            "password": password
-        })
+        endpoint = f"{self.url}/auth/v1/signup"
+        payload = {"email": email, "password": password}
+        response = requests.post(endpoint, json=payload, headers=self.headers)
+        
+        if response.status_code not in [200, 201]:
+             # Try to extract error message
+             try:
+                 err = response.json()
+                 msg = err.get('msg') or err.get('message') or err.get('error_description') or response.text
+             except:
+                 msg = response.text
+             raise Exception(f"Signup failed: {msg}")
+             
+        return self._parse_auth_response(response.json())
 
     def sign_in(self, email, password):
-        return self.auth.sign_in_with_password({
-            "email": email, 
-            "password": password
-        })
+        endpoint = f"{self.url}/auth/v1/token?grant_type=password"
+        payload = {"email": email, "password": password}
+        response = requests.post(endpoint, json=payload, headers=self.headers)
+        
+        if response.status_code != 200:
+            try:
+                 err = response.json()
+                 msg = err.get('msg') or err.get('message') or err.get('error_description') or response.text
+            except:
+                 msg = response.text
+            raise Exception(f"Login failed: {msg}")
+            
+        return self._parse_auth_response(response.json())
 
-    def sign_out(self):
-        return self.auth.sign_out()
+    def sign_out(self, access_token=None):
+        if not access_token:
+            return
+        endpoint = f"{self.url}/auth/v1/logout"
+        requests.post(endpoint, headers=self._get_headers(access_token))
+
+    def _parse_auth_response(self, data):
+        # Create a simple object structure similar to what the SDK returns
+        class AuthResponse:
+            def __init__(self, data):
+                self.user = User(data.get('user', {})) if data.get('user') else None
+                self.session = Session(data) if 'access_token' in data else None
+        
+        class User:
+            def __init__(self, data):
+                self.id = data.get('id')
+                self.email = data.get('email')
+        
+        class Session:
+            def __init__(self, data):
+                self.access_token = data.get('access_token')
+                
+        return AuthResponse(data)
         
     def get_user_credits(self, user_id, access_token):
         """Get remaining credits for a user"""
-        db = self.get_db_client(access_token)
+        endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}&select=credits_remaining"
         try:
-            # First try to get existing record
-            response = db.from_("user_credits").select("credits_remaining").eq("user_id", user_id).execute()
-            
-            if response.data:
-                return response.data[0]['credits_remaining']
-            else:
-                # If no record exists, this might be a new user who wasn't caught by a trigger (fallback)
-                # Or we can insert a default record here if we have permissions
-                # For now, let's assume 0 or handle it gracefully
-                return 0
+            response = requests.get(endpoint, headers=self._get_headers(access_token))
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    return data[0]['credits_remaining']
+            # Fallback
+            return 0
         except Exception as e:
             print(f"Error fetching credits: {e}")
             return 0
 
     def decrement_credits(self, user_id, access_token):
         """Decrement 1 credit from user"""
-        db = self.get_db_client(access_token)
-        # We need to call a stored procedure or just update. 
-        # Ideally use an RPC 'decrement_credit' to be safe, but simple update is fine for MVP.
-        # Fetch current first
+        # Ideally use RPC, but simple update for MVP
         current = self.get_user_credits(user_id, access_token)
         if current > 0:
-            db.from_("user_credits").update({"credits_remaining": current - 1}).eq("user_id", user_id).execute()
+            endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}"
+            payload = {"credits_remaining": current - 1}
+            requests.patch(endpoint, json=payload, headers=self._get_headers(access_token))
             return True
         return False
 
     def log_invoice(self, user_id, invoice_data, access_token):
         """Log the successful extraction to history"""
-        db = self.get_db_client(access_token)
+        endpoint = f"{self.url}/rest/v1/invoice_history"
         record = {
             "user_id": user_id,
             "vendor_name": invoice_data.get("vendor_name"),
-            "total_amount": invoice_data.get("total_amount"),
+            "total_amount": str(invoice_data.get("total_amount")),
             "currency": invoice_data.get("currency", "CNY"),
             "invoice_number": invoice_data.get("invoice_number")
         }
-        db.from_("invoice_history").insert(record).execute()
+        requests.post(endpoint, json=record, headers=self._get_headers(access_token))
+
