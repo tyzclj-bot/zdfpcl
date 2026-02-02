@@ -153,10 +153,15 @@ def main():
                                 
                                 # Clean up - CRITICAL: Clear query params to prevent loop
                                 st.query_params.clear()
-                                del st.session_state.oauth_verifier
+                                # del st.session_state.oauth_verifier
                                 
                                 st.success("Logged in with Google successfully!")
-                                time.sleep(1) # Give UI a moment to show success
+                                
+                                # Manual button to break loops
+                                if st.button("Go to Dashboard", type="primary"):
+                                    st.rerun()
+                                    
+                                time.sleep(2) # Give UI a moment to show success
                                 st.rerun()
                     except Exception as e:
                         st.error(f"Google Login failed: {str(e)}")
