@@ -332,8 +332,8 @@ def main():
         st.markdown("Need help? Contact us at:")
         st.code("tyzclj@gmail.com", language=None)
 
-        st.info("System Status: Online")
-        st.caption("v1.2.0 (Stable Auth Fix)")
+        # st.info("System Status: Online")
+        # st.caption("v1.2.0 (Stable Auth Fix)")
 
     # --- Main App Display ---
     
@@ -403,14 +403,7 @@ def main():
         
     else:
         # DASHBOARD VIEW (Logged In)
-        # We can keep a smaller header here
-        st.markdown("""
-            <div style="margin-bottom: 2rem;">
-                <h2 style="font-weight: 700; color: #1e293b;">Dashboard</h2>
-                <p style="color: #64748b;">Save 90% of your bookkeeping time with AI</p>
-            </div>
-        """, unsafe_allow_html=True)
-
+        
         # Check Credits Logic
         if st.session_state.credits <= 0:
             st.warning("⚠️ You have 0 credits remaining. Please upgrade your plan to continue parsing invoices.")
