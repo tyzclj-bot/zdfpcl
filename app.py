@@ -113,6 +113,8 @@ def init_supabase():
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 
 # --- App Logic ---
+FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
+
 def main():
     # --- Session State Init ---
     if 'user' not in st.session_state:
@@ -168,7 +170,7 @@ def main():
 
                 # 3. Fallback to Fixed Verifier (Production Stability)
                 if not verifier:
-                    verifier = "v1_persistent_verifier_fix_zdfpcl_2025"
+                    verifier = FIXED_VERIFIER
                 
                 if verifier:
                     try:
@@ -268,7 +270,8 @@ def main():
                 
                 # Generate URL and Verifier
                 # We save verifier to session_state so we can use it when user returns
-                google_url, verifier = supabase.get_oauth_url("google", redirect_url)
+                # Use FIXED_VERIFIER to ensure session loss doesn't break the flow
+                google_url, verifier = supabase.get_oauth_url("google", redirect_url, fixed_verifier=FIXED_VERIFIER)
                 st.session_state.oauth_verifier = verifier
                 
                 # Use link_button to open the Google Auth URL
@@ -330,7 +333,7 @@ def main():
         st.code("tyzclj@gmail.com", language=None)
 
         st.info("System Status: Online")
-        st.caption("v1.1.0 (Production Fix)")
+        st.caption("v1.2.0 (Stable Auth Fix)")
 
     # --- Main App Display ---
     
