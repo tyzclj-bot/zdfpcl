@@ -155,8 +155,16 @@ def main():
             if 'code' in st.query_params:
                 code = st.query_params['code']
                 
-                # Check for verifier in session state
-                verifier = st.session_state.get('oauth_verifier')
+                # Attempt to retrieve verifier from state (Stateless) or Session (Stateful)
+                verifier = None
+                
+                # 1. Try State (Simplified: State IS the verifier)
+                if 'state' in st.query_params:
+                    verifier = st.query_params['state']
+                
+                # 2. Fallback to Session State
+                if not verifier:
+                    verifier = st.session_state.get('oauth_verifier')
                 
                 if verifier:
                     try:

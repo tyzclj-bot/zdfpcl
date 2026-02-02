@@ -74,10 +74,8 @@ class SupabaseManager:
         code_challenge = base64.urlsafe_b64encode(hashed).decode('utf-8').rstrip('=')
 
         # 3. Encode verifier in state (Stateless PKCE for Streamlit)
-        # We embed the verifier in the state parameter to persist it across the redirect
-        # even if the Streamlit session is lost.
-        state_data = json.dumps({"verifier": code_verifier})
-        state = base64.urlsafe_b64encode(state_data.encode()).decode()
+        # SIMPLIFIED: Just use the verifier directly as state to avoid encoding issues
+        state = code_verifier
         
         # 4. Construct URL
         params = {
