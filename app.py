@@ -226,13 +226,16 @@ def main():
             if st.session_state.user:
                 # Display Avatar if available
                 user_meta = getattr(st.session_state.user, 'user_metadata', {})
-                avatar_url = user_meta.get('avatar_url')
-                full_name = user_meta.get('full_name') or st.session_state.user.email.split('@')[0]
+                
+                # Google often uses 'picture' instead of 'avatar_url'
+                avatar_url = user_meta.get('avatar_url') or user_meta.get('picture')
+                full_name = user_meta.get('full_name') or user_meta.get('name') or st.session_state.user.email.split('@')[0]
                 
                 if avatar_url:
                     c1, c2 = st.columns([1, 3])
                     with c1:
-                        st.image(avatar_url, width=50)
+                        # Use st.image with a mask if possible, or just simple
+                        st.image(avatar_url, width=60)
                     with c2:
                         st.write(f"**{full_name}**")
                         st.caption(st.session_state.user.email)
