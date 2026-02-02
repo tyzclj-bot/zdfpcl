@@ -408,20 +408,32 @@ def main():
             </div>
         """, unsafe_allow_html=True)
 
-        # Demo Video Placeholder
+        # Demo Video Area
         st.markdown("""
             <div style="
-                background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-                border-radius: 16px;
-                padding: 4rem 2rem;
-                text-align: center;
-                border: 2px dashed #cbd5e1;
+                position: relative;
+                padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+                height: 0;
                 margin-bottom: 3rem;
-                box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+                border: 1px solid #e2e8f0;
             ">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">▶️</div>
-                <h3 style="color: #64748b; margin: 0;">Watch how it works</h3>
-                <p style="color: #94a3b8; font-weight: 500;">(Demo Video Coming Soon)</p>
+                <iframe 
+                    src="https://www.loom.com/embed/74ac71240953463ca8825d89d2898f35?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true" 
+                    frameborder="0" 
+                    webkitallowfullscreen 
+                    mozallowfullscreen 
+                    allowfullscreen 
+                    style="
+                        position: absolute; 
+                        top: 0; 
+                        left: 0; 
+                        width: 100%; 
+                        height: 100%;
+                    "
+                ></iframe>
             </div>
         """, unsafe_allow_html=True)
 
