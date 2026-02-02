@@ -136,25 +136,42 @@ def main():
                 st.rerun()
         else:
             # Handle OAuth Callback (Check if returning from Google)
+            # Use query_params directly which is more robust in newer Streamlit versions
             if 'code' in st.query_params:
                 code = st.query_params['code']
+                
+                # Check for verifier in session state
                 verifier = st.session_state.get('oauth_verifier')
                 
                 if verifier:
                     try:
-                        res = supabase.exchange_code_for_session(code, verifier)
-                        if res and res.user:
-                            st.session_state.user = res.user
-                            st.session_state.access_token = res.session.access_token
-                            # Clean up
-                            st.query_params.clear()
-                            del st.session_state.oauth_verifier
-                            st.success("Logged in with Google successfully!")
-                            st.rerun()
+                        with st.spinner("Logging in with Google..."):
+                            res = supabase.exchange_code_for_session(code, verifier)
+                            if res and res.user:
+                                st.session_state.user = res.user
+                                st.session_state.access_token = res.session.access_token
+                                
+                                # Clean up - CRITICAL: Clear query params to prevent loop
+                                st.query_params.clear()
+                                del st.session_state.oauth_verifier
+                                
+                                st.success("Logged in with Google successfully!")
+                                time.sleep(1) # Give UI a moment to show success
+                                st.rerun()
                     except Exception as e:
                         st.error(f"Google Login failed: {str(e)}")
-                        # Clear params to avoid loop
+                        # Clear params to avoid loop even on error
                         st.query_params.clear()
+                        # Optional: Wait a bit so user sees the error
+                        time.sleep(3)
+                        st.rerun()
+                else:
+                    # Case: We have a code but no verifier. 
+                    # This happens if session state was lost (e.g. cross-device or browser privacy settings)
+                    # Or simply a refresh on the callback URL.
+                    st.warning("Session expired or invalid. Please try logging in again.")
+                    st.query_params.clear()
+                    st.rerun()
             
             # If User is Logged In
             if st.session_state.user:
@@ -203,7 +220,7 @@ def main():
                 st.session_state.oauth_verifier = verifier
                 
                 # Use link_button to open the Google Auth URL
-                st.link_button("🇬 Continue with Google", google_url, type="primary", use_container_width=True)
+                st.link_button("Continue with Google", google_url, type="primary", use_container_width=True)
                 
                 st.divider()
 
