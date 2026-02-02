@@ -116,6 +116,22 @@ from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
 
 def main():
+    # --- Promotional Banner ---
+    st.markdown("""
+        <div style="
+            background-color: #4f46e5; 
+            color: white; 
+            padding: 0.75rem; 
+            text-align: center; 
+            font-weight: 600; 
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        ">
+            The fastest way to convert invoices to QuickBooks CSV.
+        </div>
+    """, unsafe_allow_html=True)
+
     # --- Session State Init ---
     if 'user' not in st.session_state:
         st.session_state.user = None
@@ -134,7 +150,7 @@ def main():
             st.warning("Please configure Supabase credentials.")
             st.session_state.supabase_url = st.text_input("Supabase URL", placeholder="https://xyz.supabase.co")
             st.session_state.supabase_key = st.text_input("Supabase Anon Key", type="password")
-            if st.button("Save Configuration"):
+            if st.button("Save Settings"):
                 st.rerun()
         else:
             # --- DEBUG SECTION ---
@@ -291,11 +307,11 @@ def main():
                 st.session_state.oauth_verifier = verifier
                 
                 # Use link_button to open the Google Auth URL
-                st.link_button("Google Login", google_url, type="primary", use_container_width=True)
+                st.link_button("Continue with Google", google_url, type="primary", use_container_width=True)
                 
                 st.divider()
 
-                tab_login, tab_signup = st.tabs(["Login", "Register"])
+                tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
                 
                 with tab_login:
                     email = st.text_input("Email", key="login_email")
@@ -314,11 +330,11 @@ def main():
                 with tab_signup:
                     s_email = st.text_input("Email", key="signup_email")
                     s_password = st.text_input("Password", type="password", key="signup_pass")
-                    if st.button("Sign Up"):
+                    if st.button("Create Account"):
                         try:
                             res = supabase.sign_up(s_email, s_password)
                             if res and res.user:
-                                st.success("Signup successful! Please check your email for confirmation (if enabled) or login.")
+                                st.success("Account created! Please check your email for confirmation (if enabled) or sign in.")
                                 # Auto login if session provided
                                 if res.session:
                                     st.session_state.user = res.user
@@ -416,6 +432,22 @@ def main():
             <p>New users get <b>5 free credits</b>!</p>
         </div>
         """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        # --- FAQ Section ---
+        st.subheader("Frequently Asked Questions")
+        
+        faq1, faq2, faq3 = st.columns(3)
+        with faq1:
+            st.markdown("**Is it secure?**")
+            st.caption("Yes, we use AES encryption to protect your data.")
+        with faq2:
+            st.markdown("**Does it support PDFs?**")
+            st.caption("Yes, we support both image files (PNG, JPG) and PDFs.")
+        with faq3:
+            st.markdown("**How do I import to QuickBooks?**")
+            st.caption("Simply download our CSV export and use the standard QuickBooks Import feature.")
         
     else:
         # DASHBOARD VIEW (Logged In)
