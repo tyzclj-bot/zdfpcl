@@ -25,6 +25,8 @@ st.set_page_config(
 
 # --- Custom Styling (Modern Western Aesthetic) ---
 st.markdown("""
+    <!-- Prevent Google Translate from breaking React -->
+    <meta name="google" content="notranslate">
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
