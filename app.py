@@ -218,6 +218,12 @@ def main():
                     st.session_state.show_legal = "terms"
                     st.rerun()
 
+        # --- Support Section ---
+        st.markdown("---")
+        st.markdown("### 💬 Support")
+        st.markdown("Need help? Contact us at:")
+        st.code("tyzclj@gmail.com", language=None)
+
         st.info("System Status: Online")
 
     # --- Main App Display ---
@@ -256,9 +262,12 @@ def main():
 
         with col1:
             st.subheader("1. Upload Invoice")
-            uploaded_file = st.file_uploader("Drop your invoice here (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
-            
-            if uploaded_file:
+        uploaded_file = st.file_uploader("Drop your invoice here (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
+        
+        # Trust Signals
+        st.info("🛡️ **7-Day Money Back Guarantee**  \n🔒 **Secure Payment by Lemon Squeezy**")
+
+        if uploaded_file:
                 # Display preview based on file type
                 file_type = uploaded_file.type
                 if "image" in file_type:
