@@ -204,9 +204,46 @@ def main():
                             st.error(f"Signup failed: {str(e)}")
 
         st.divider()
+        
+        # --- Legal Section ---
+        with st.expander("⚖️ Legal & Terms"):
+            # Use columns to avoid potential button id conflicts in sidebar
+            l1, l2 = st.columns(2)
+            with l1:
+                if st.button("Privacy", key="btn_privacy"):
+                    st.session_state.show_legal = "privacy"
+                    st.rerun()
+            with l2:
+                if st.button("Terms", key="btn_terms"):
+                    st.session_state.show_legal = "terms"
+                    st.rerun()
+
         st.info("System Status: Online")
 
     # --- Main App Display ---
+    
+    # Handle Legal Page Display
+    if 'show_legal' in st.session_state:
+        # Use st.empty() to clear previous content effectively if needed
+        placeholder = st.empty()
+        with placeholder.container():
+            if st.session_state.show_legal == "privacy":
+                st.title("🔒 Privacy Policy")
+                st.markdown(PRIVACY_POLICY)
+                if st.button("← Back to App", key="back_btn_privacy"):
+                    del st.session_state.show_legal
+                    st.rerun()
+                # Stop execution here so main app doesn't render
+                return
+            elif st.session_state.show_legal == "terms":
+                st.title("📜 Terms of Service")
+                st.markdown(TERMS_OF_SERVICE)
+                if st.button("← Back to App", key="back_btn_terms"):
+                    del st.session_state.show_legal
+                    st.rerun()
+                # Stop execution here so main app doesn't render
+                return
+
     if st.session_state.user:
         # Check Credits Logic
         if st.session_state.credits <= 0:
