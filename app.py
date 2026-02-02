@@ -288,6 +288,7 @@ def main():
         st.code("tyzclj@gmail.com", language=None)
 
         st.info("System Status: Online")
+        st.caption("v1.1.0 (Production Fix)")
 
     # --- Main App Display ---
     
