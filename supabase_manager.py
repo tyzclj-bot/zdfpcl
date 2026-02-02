@@ -64,6 +64,7 @@ class SupabaseManager:
         Generates the OAuth URL for the given provider using PKCE flow.
         Returns (auth_url, code_verifier)
         """
+        # Force cache bust
         # 1. Generate Code Verifier
         # Random string between 43-128 chars
         code_verifier = secrets.token_urlsafe(96)[:128]
