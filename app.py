@@ -114,6 +114,14 @@ from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 
 # --- App Logic ---
 def main():
+    # --- Session State Init ---
+    if 'user' not in st.session_state:
+        st.session_state.user = None
+    if 'access_token' not in st.session_state:
+        st.session_state.access_token = None
+    if 'credits' not in st.session_state:
+        st.session_state.credits = 0
+
     # --- Sidebar: Auth & Settings ---
     with st.sidebar:
         st.header("Authorization")
