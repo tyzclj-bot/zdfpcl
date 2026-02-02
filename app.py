@@ -250,7 +250,58 @@ def main():
                 # Stop execution here so main app doesn't render
                 return
 
-    if st.session_state.user:
+    # --- Hero Section (Visible to all, but styled differently if logged in?) ---
+    # Actually, for a SaaS tool, the "Landing" is usually different from "Dashboard".
+    # But user wants this "Homepage" look. Let's put it at the top.
+    
+    if not st.session_state.user:
+        # LANDING PAGE VIEW
+        st.markdown("""
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 3rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;">
+                    AI Invoice Intelligence
+                </h1>
+                <p style="font-size: 1.5rem; color: #475569; font-weight: 500;">
+                    Save 90% of your bookkeeping time with AI
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Demo Video Placeholder
+        st.markdown("""
+            <div style="
+                background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+                border-radius: 16px;
+                padding: 4rem 2rem;
+                text-align: center;
+                border: 2px dashed #cbd5e1;
+                margin-bottom: 3rem;
+                box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+            ">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">▶️</div>
+                <h3 style="color: #64748b; margin: 0;">Watch how it works</h3>
+                <p style="color: #94a3b8; font-weight: 500;">(Demo Video Coming Soon)</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="text-align: center; padding: 20px;">
+            <h3>👋 Ready to get started?</h3>
+            <p>Please log in or register via the sidebar to start processing invoices.</p>
+            <p>New users get <b>5 free credits</b>!</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    else:
+        # DASHBOARD VIEW (Logged In)
+        # We can keep a smaller header here
+        st.markdown("""
+            <div style="margin-bottom: 2rem;">
+                <h2 style="font-weight: 700; color: #1e293b;">Dashboard</h2>
+                <p style="color: #64748b;">Save 90% of your bookkeeping time with AI</p>
+            </div>
+        """, unsafe_allow_html=True)
+
         # Check Credits Logic
         if st.session_state.credits <= 0:
             st.warning("⚠️ You have 0 credits remaining. Please upgrade your plan to continue parsing invoices.")
@@ -261,7 +312,9 @@ def main():
         col1, col2 = st.columns([1, 2], gap="large")
 
         with col1:
-            st.subheader("1. Upload Invoice")
+            # Wrap in a container for card-like look
+            with st.container(border=True):
+                st.subheader("1. Upload Invoice")
         uploaded_file = st.file_uploader("Drop your invoice here (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
         
         # Trust Signals
@@ -328,100 +381,92 @@ def main():
                             st.error(f"An error occurred during processing: {str(e)}")
 
         with col2:
-            st.subheader("2. Extraction Results")
-            
-            if 'invoice_data' in st.session_state:
-                data = st.session_state['invoice_data']
-
-                # 如果是诊断模式的结果，则特殊显示
-                if "diagnostic_description" in data:
-                    st.subheader("AI Vision Diagnostic Report")
-                    st.markdown(data["diagnostic_description"])
-                    st.info("This is a diagnostic run. We are checking the connection to the vision model.")
-                    return # 结束渲染，不显示下面的常规结果
-
-                # Key Metrics Row
-                m1, m2, m3 = st.columns(3)
-                with m1:
-                    st.metric("Vendor", data.get('vendor_name'))
-                with m2:
-                    st.metric("Total Amount", f"{data.get('currency')} {data.get('total_amount')}")
-                with m3:
-                    st.metric("Invoice #", data.get('invoice_number'))
-
-                # Details Tab
-                tab1, tab2 = st.tabs(["Line Items", "Raw JSON"])
+            with st.container(border=True):
+                st.subheader("2. Extraction Results")
                 
-                with tab1:
-                    if data.get('items'):
-                        df = pd.DataFrame(data['items'])
-                        # Modern styling for dataframe
-                        st.dataframe(df, use_container_width=True, hide_index=True)
-                    else:
-                        st.write("No line items detected.")
+                if 'invoice_data' in st.session_state:
+                    data = st.session_state['invoice_data']
 
-                with tab2:
-                    st.json(data)
+                    # 如果是诊断模式的结果，则特殊显示
+                    if "diagnostic_description" in data:
+                        st.subheader("AI Vision Diagnostic Report")
+                        st.markdown(data["diagnostic_description"])
+                        st.info("This is a diagnostic run. We are checking the connection to the vision model.")
+                        return # 结束渲染，不显示下面的常规结果
 
-                st.divider()
-                
-                # Action Section
-                st.subheader("3. Export & Sync")
-                
-                # Prepare data for export
-                items_data = data.get('items', [])
-                df_export = pd.DataFrame(items_data) if items_data else pd.DataFrame()
+                    # Key Metrics Row
+                    m1, m2, m3 = st.columns(3)
+                    with m1:
+                        st.metric("Vendor", data.get('vendor_name'))
+                    with m2:
+                        st.metric("Total Amount", f"{data.get('currency')} {data.get('total_amount')}")
+                    with m3:
+                        st.metric("Invoice #", data.get('invoice_number'))
 
-                c1, c2, c3, c4 = st.columns(4)
-                with c1:
-                    if st.button("🚀 Sync to QuickBooks"):
-                        with st.spinner("Connecting to QuickBooks Online..."):
-                            qb = QuickBooksAdapter()
-                            if qb.sync_invoice(data):
-                                st.toast("Successfully synced to QuickBooks!", icon="✅")
-                                st.success("Synchronized with ERP system.")
-                
-                with c2:
-                    csv = df_export.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📄 Download CSV",
-                        data=csv,
-                        file_name=f"invoice_{data.get('invoice_number', 'export')}.csv",
-                        mime="text/csv"
-                    )
-
-                with c3:
-                    buffer = io.BytesIO()
-                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                        df_export.to_excel(writer, index=False, sheet_name='Invoice')
+                    # Details Tab
+                    tab1, tab2 = st.tabs(["Line Items", "Raw JSON"])
                     
-                    st.download_button(
-                        label="📊 Download Excel",
-                        data=buffer.getvalue(),
-                        file_name=f"invoice_{data.get('invoice_number', 'export')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+                    with tab1:
+                        if data.get('items'):
+                            df = pd.DataFrame(data['items'])
+                            # Modern styling for dataframe
+                            st.dataframe(df, use_container_width=True, hide_index=True)
+                        else:
+                            st.write("No line items detected.")
 
-                with c4:
-                    json_str = json.dumps(data, indent=4, ensure_ascii=False)
-                    st.download_button(
-                        label="📥 Download JSON",
-                        data=json_str,
-                        file_name=f"invoice_{data.get('invoice_number', 'export')}.json",
-                        mime="application/json"
-                    )
-            else:
-                st.info("Upload and process an invoice to see results here.")
-                # Placeholder image or illustration could go here
-    else:
-        # Not logged in
-        st.markdown("""
-        <div style="text-align: center; padding: 50px;">
-            <h2>👋 Welcome to Invoice Intelligence</h2>
-            <p>Please log in or register via the sidebar to start processing invoices.</p>
-            <p>New users get <b>5 free credits</b>!</p>
-        </div>
-        """, unsafe_allow_html=True)
+                    with tab2:
+                        st.json(data)
+
+                    st.divider()
+                    
+                    # Action Section
+                    st.subheader("3. Export & Sync")
+                    
+                    # Prepare data for export
+                    items_data = data.get('items', [])
+                    df_export = pd.DataFrame(items_data) if items_data else pd.DataFrame()
+
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1:
+                        if st.button("🚀 Sync to QuickBooks"):
+                            with st.spinner("Connecting to QuickBooks Online..."):
+                                qb = QuickBooksAdapter()
+                                if qb.sync_invoice(data):
+                                    st.toast("Successfully synced to QuickBooks!", icon="✅")
+                                    st.success("Synchronized with ERP system.")
+                    
+                    with c2:
+                        csv = df_export.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            label="📄 Download CSV",
+                            data=csv,
+                            file_name=f"invoice_{data.get('invoice_number', 'export')}.csv",
+                            mime="text/csv"
+                        )
+
+                    with c3:
+                        buffer = io.BytesIO()
+                        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                            df_export.to_excel(writer, index=False, sheet_name='Invoice')
+                        
+                        st.download_button(
+                            label="📊 Download Excel",
+                            data=buffer.getvalue(),
+                            file_name=f"invoice_{data.get('invoice_number', 'export')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+
+                    with c4:
+                        json_str = json.dumps(data, indent=4, ensure_ascii=False)
+                        st.download_button(
+                            label="📥 Download JSON",
+                            data=json_str,
+                            file_name=f"invoice_{data.get('invoice_number', 'export')}.json",
+                            mime="application/json"
+                        )
+                else:
+                    st.info("Upload and process an invoice to see results here.")
+                    # Placeholder image or illustration could go here
 
 if __name__ == "__main__":
     main()
