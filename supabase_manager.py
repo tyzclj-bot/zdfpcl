@@ -74,8 +74,10 @@ class SupabaseManager:
         code_challenge = base64.urlsafe_b64encode(hashed).decode('utf-8').rstrip('=')
 
         # 3. Encode verifier in state (Stateless PKCE for Streamlit)
-        # SIMPLIFIED: Just use the verifier directly as state to avoid encoding issues
-        state = code_verifier
+        # REMOVED STATE completely to test if provider accepts empty state
+        # Some providers/libraries are picky about state format.
+        # We will rely on session_state fallback if state is stripped.
+        state = "dummy_state" 
         
         # 4. Construct URL
         params = {
@@ -83,7 +85,7 @@ class SupabaseManager:
             "redirect_to": redirect_to,
             "code_challenge": code_challenge,
             "code_challenge_method": "s256",
-            "state": state
+            # "state": state # Temporarily remove state to isolate the issue
         }
         query_string = urlencode(params)
         auth_url = f"{self.url}/auth/v1/authorize?{query_string}"

@@ -137,18 +137,18 @@ def main():
         else:
             # --- DEBUG SECTION ---
             # Remove this in production once fixed
-            with st.expander("🔧 Connection Debugger", expanded=True):
-                st.write("Current URL Parameters:")
-                st.json(dict(st.query_params))
-                
-                if 'code' in st.query_params:
-                    st.success("✅ Auth Code Detected!")
-                else:
-                    st.info("ℹ️ No Auth Code in URL")
-                    
-                if 'error' in st.query_params:
-                    st.error(f"⚠️ Provider Error: {st.query_params.get('error')}")
-                    st.error(f"Description: {st.query_params.get('error_description')}")
+            # with st.expander("🔧 Connection Debugger", expanded=True):
+            #     st.write("Current URL Parameters:")
+            #     st.json(dict(st.query_params))
+            #     
+            #     if 'code' in st.query_params:
+            #         st.success("✅ Auth Code Detected!")
+            #     else:
+            #         st.info("ℹ️ No Auth Code in URL")
+            #         
+            #     if 'error' in st.query_params:
+            #         st.error(f"⚠️ Provider Error: {st.query_params.get('error')}")
+            #         st.error(f"Description: {st.query_params.get('error_description')}")
 
             # Handle OAuth Callback (Check if returning from Google)
             # Use query_params directly which is more robust in newer Streamlit versions
