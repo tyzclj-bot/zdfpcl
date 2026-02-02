@@ -164,21 +164,36 @@ def main():
                                 time.sleep(2) # Give UI a moment to show success
                                 st.rerun()
                     except Exception as e:
+                        # Improved Error Logging
                         st.error(f"Google Login failed: {str(e)}")
+                        # Debug info for the user to help troubleshoot
+                        with st.expander("Troubleshooting Info"):
+                            st.write(f"Verifier present: {bool(verifier)}")
+                            st.write(f"Code present: {bool(code)}")
+                            if hasattr(e, 'response'):
+                                st.write(f"Response: {e.response.text}")
+                                
                         # Clear params to avoid loop even on error
                         st.query_params.clear()
                         # Optional: Wait a bit so user sees the error
-                        time.sleep(3)
+                        time.sleep(5) # Increase wait time to read error
                         st.rerun()
                 else:
                     # Case: We have a code but no verifier. 
                     # This happens if session state was lost (e.g. cross-device or browser privacy settings)
                     # Or simply a refresh on the callback URL.
                     st.warning("Session expired or invalid. Please try logging in again.")
+                    # Debug Info
+                    with st.expander("Debug Details"):
+                        st.write("Reason: OAuth Verifier missing from session and state.")
+                        st.write("Please ensure cookies are enabled and you are not in Incognito mode causing state loss.")
+                    
                     st.query_params.clear()
-                    st.rerun()
+                    if st.button("Retry Login"):
+                        st.rerun()
             
             # If User is Logged In
+            # FORCE RE-CHECK of Session State if needed
             if st.session_state.user:
                 st.success(f"Welcome, {st.session_state.user.email}")
                 
