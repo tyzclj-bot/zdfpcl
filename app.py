@@ -225,7 +225,7 @@ def main():
                 st.session_state.oauth_verifier = verifier
                 
                 # Use link_button to open the Google Auth URL
-                st.link_button("Continue with Google", google_url, type="primary", use_container_width=True)
+                st.link_button("Google Login", google_url, type="primary", use_container_width=True)
                 
                 st.divider()
 

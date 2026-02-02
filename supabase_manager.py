@@ -72,13 +72,20 @@ class SupabaseManager:
         # 2. Generate Code Challenge (SHA256 of verifier, base64url encoded)
         hashed = hashlib.sha256(code_verifier.encode('utf-8')).digest()
         code_challenge = base64.urlsafe_b64encode(hashed).decode('utf-8').rstrip('=')
+
+        # 3. Encode verifier in state (Stateless PKCE for Streamlit)
+        # We embed the verifier in the state parameter to persist it across the redirect
+        # even if the Streamlit session is lost.
+        state_data = json.dumps({"verifier": code_verifier})
+        state = base64.urlsafe_b64encode(state_data.encode()).decode()
         
-        # 3. Construct URL
+        # 4. Construct URL
         params = {
             "provider": provider,
             "redirect_to": redirect_to,
             "code_challenge": code_challenge,
-            "code_challenge_method": "s256"
+            "code_challenge_method": "s256",
+            "state": state
         }
         query_string = urlencode(params)
         auth_url = f"{self.url}/auth/v1/authorize?{query_string}"
