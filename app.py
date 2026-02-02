@@ -216,8 +216,13 @@ def main():
                 # Login / Register Tabs
                 
                 # --- Google OAuth Button ---
-                # Determine Redirect URL (Default to localhost for dev, env var for prod)
-                redirect_url = os.getenv("APP_URL", "http://localhost:8502")
+                # Determine Redirect URL (Prioritize Secrets, then Env, then Default to Prod)
+                redirect_url = "https://quickbills-ai.streamlit.app/"
+                
+                if "APP_URL" in st.secrets:
+                    redirect_url = st.secrets["APP_URL"]
+                elif os.getenv("APP_URL"):
+                    redirect_url = os.getenv("APP_URL")
                 
                 # Generate URL and Verifier
                 # We save verifier to session_state so we can use it when user returns
