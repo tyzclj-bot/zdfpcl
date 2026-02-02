@@ -127,6 +127,7 @@ class SupabaseManager:
             def __init__(self, data):
                 self.id = data.get('id')
                 self.email = data.get('email')
+                self.user_metadata = data.get('user_metadata', {})
         
         class Session:
             def __init__(self, data):

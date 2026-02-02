@@ -224,7 +224,20 @@ def main():
             # If User is Logged In
             # FORCE RE-CHECK of Session State if needed
             if st.session_state.user:
-                st.success(f"Welcome, {st.session_state.user.email}")
+                # Display Avatar if available
+                user_meta = getattr(st.session_state.user, 'user_metadata', {})
+                avatar_url = user_meta.get('avatar_url')
+                full_name = user_meta.get('full_name') or st.session_state.user.email.split('@')[0]
+                
+                if avatar_url:
+                    c1, c2 = st.columns([1, 3])
+                    with c1:
+                        st.image(avatar_url, width=50)
+                    with c2:
+                        st.write(f"**{full_name}**")
+                        st.caption(st.session_state.user.email)
+                else:
+                    st.success(f"Welcome, {full_name}")
                 
                 # Fetch fresh credits and plan
                 profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
