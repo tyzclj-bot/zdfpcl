@@ -88,6 +88,23 @@ class SupabaseManager:
             print(f"Error fetching credits: {e}")
             return 0
 
+    def get_user_profile(self, user_id, access_token):
+        """Get full profile including credits and plan"""
+        endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}&select=credits_remaining,plan_status"
+        try:
+            response = requests.get(endpoint, headers=self._get_headers(access_token))
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    return {
+                        "credits": data[0].get('credits_remaining', 0),
+                        "plan": data[0].get('plan_status', 'free')
+                    }
+            return {"credits": 0, "plan": "free"}
+        except Exception as e:
+            print(f"Error fetching profile: {e}")
+            return {"credits": 0, "plan": "free"}
+
     def decrement_credits(self, user_id, access_token):
         """Decrement 1 credit from user"""
         # Ideally use RPC, but simple update for MVP

@@ -110,21 +110,10 @@ def init_supabase():
         return SupabaseManager(url, key)
     return None
 
+from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
+
 # --- App Logic ---
 def main():
-    # Header Section
-    st.title("🧾 Invoice Intelligence")
-    st.markdown("<p style='color: #64748b; font-size: 1.1rem;'>AI-Powered Invoice Extraction & ERP Synchronization</p>", unsafe_allow_html=True)
-    st.divider()
-
-    # --- Session State Init ---
-    if 'user' not in st.session_state:
-        st.session_state.user = None
-    if 'access_token' not in st.session_state:
-        st.session_state.access_token = None
-    if 'credits' not in st.session_state:
-        st.session_state.credits = 0
-
     # --- Sidebar: Auth & Settings ---
     with st.sidebar:
         st.header("Authorization")
@@ -142,15 +131,30 @@ def main():
             if st.session_state.user:
                 st.success(f"Welcome, {st.session_state.user.email}")
                 
-                # Fetch fresh credits
-                current_credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
-                st.session_state.credits = current_credits
+                # Fetch fresh credits and plan
+                profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
+                st.session_state.credits = profile.get("credits", 0)
+                plan_status = profile.get("plan", "free")
                 
-                st.metric("Credits Remaining", current_credits)
+                st.metric("Credits Remaining", st.session_state.credits)
                 
-                if current_credits <= 0:
+                # Show Plan Badge
+                if plan_status == 'pro':
+                    st.success("💎 Pro Plan Active")
+                else:
+                    st.info("Free Plan")
+                
+                if st.session_state.credits <= 0:
                     st.error("Please Upgrade Plan")
                 
+                # Upgrade Button (Only show if not pro)
+                if plan_status != 'pro':
+                    # PayPal Invoice Link
+                    # Note: Automatic tracking is not available with this static link. 
+                    # You will need to manually verify payments.
+                    checkout_url = "https://www.paypal.com/invoice/p/#FNC8963Z27RBSCZ5"
+                    st.link_button("💎 Upgrade to Pro", checkout_url, type="primary")
+
                 if st.button("Logout"):
                     supabase.sign_out(st.session_state.access_token)
                     st.session_state.user = None
