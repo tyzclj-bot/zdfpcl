@@ -1,6 +1,10 @@
 
 import requests
 import json
+import secrets
+import hashlib
+import base64
+from urllib.parse import urlencode
 
 class SupabaseManager:
     def __init__(self, url: str, key: str):
@@ -54,6 +58,52 @@ class SupabaseManager:
             return
         endpoint = f"{self.url}/auth/v1/logout"
         requests.post(endpoint, headers=self._get_headers(access_token))
+
+    def get_oauth_url(self, provider, redirect_to):
+        """
+        Generates the OAuth URL for the given provider using PKCE flow.
+        Returns (auth_url, code_verifier)
+        """
+        # 1. Generate Code Verifier
+        # Random string between 43-128 chars
+        code_verifier = secrets.token_urlsafe(96)[:128]
+        
+        # 2. Generate Code Challenge (SHA256 of verifier, base64url encoded)
+        hashed = hashlib.sha256(code_verifier.encode('utf-8')).digest()
+        code_challenge = base64.urlsafe_b64encode(hashed).decode('utf-8').rstrip('=')
+        
+        # 3. Construct URL
+        params = {
+            "provider": provider,
+            "redirect_to": redirect_to,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "s256"
+        }
+        query_string = urlencode(params)
+        auth_url = f"{self.url}/auth/v1/authorize?{query_string}"
+        
+        return auth_url, code_verifier
+
+    def exchange_code_for_session(self, auth_code, code_verifier):
+        """
+        Exchanges the authorization code for a session using PKCE.
+        """
+        endpoint = f"{self.url}/auth/v1/token?grant_type=pkce"
+        payload = {
+            "auth_code": auth_code,
+            "code_verifier": code_verifier
+        }
+        response = requests.post(endpoint, json=payload, headers=self.headers)
+        
+        if response.status_code != 200:
+            try:
+                err = response.json()
+                msg = err.get('msg') or err.get('message') or err.get('error_description') or response.text
+            except:
+                msg = response.text
+            raise Exception(f"OAuth exchange failed: {msg}")
+            
+        return self._parse_auth_response(response.json())
 
     def _parse_auth_response(self, data):
         # Create a simple object structure similar to what the SDK returns

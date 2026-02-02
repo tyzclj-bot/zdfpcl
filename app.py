@@ -135,6 +135,27 @@ def main():
             if st.button("Save Configuration"):
                 st.rerun()
         else:
+            # Handle OAuth Callback (Check if returning from Google)
+            if 'code' in st.query_params:
+                code = st.query_params['code']
+                verifier = st.session_state.get('oauth_verifier')
+                
+                if verifier:
+                    try:
+                        res = supabase.exchange_code_for_session(code, verifier)
+                        if res and res.user:
+                            st.session_state.user = res.user
+                            st.session_state.access_token = res.session.access_token
+                            # Clean up
+                            st.query_params.clear()
+                            del st.session_state.oauth_verifier
+                            st.success("Logged in with Google successfully!")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Google Login failed: {str(e)}")
+                        # Clear params to avoid loop
+                        st.query_params.clear()
+            
             # If User is Logged In
             if st.session_state.user:
                 st.success(f"Welcome, {st.session_state.user.email}")
@@ -171,6 +192,21 @@ def main():
                     st.rerun()
             else:
                 # Login / Register Tabs
+                
+                # --- Google OAuth Button ---
+                # Determine Redirect URL (Default to localhost for dev, env var for prod)
+                redirect_url = os.getenv("APP_URL", "http://localhost:8502")
+                
+                # Generate URL and Verifier
+                # We save verifier to session_state so we can use it when user returns
+                google_url, verifier = supabase.get_oauth_url("google", redirect_url)
+                st.session_state.oauth_verifier = verifier
+                
+                # Use link_button to open the Google Auth URL
+                st.link_button("🇬 Continue with Google", google_url, type="primary", use_container_width=True)
+                
+                st.divider()
+
                 tab_login, tab_signup = st.tabs(["Login", "Register"])
                 
                 with tab_login:
