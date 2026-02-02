@@ -263,8 +263,11 @@ def main():
                     redirect_url = os.getenv("APP_URL")
                 
                 # Generate URL and Verifier
-                # We save verifier to session_state so we can use it when user returns
-                google_url, verifier = supabase.get_oauth_url("google", redirect_url)
+                # STABILITY FIX: Use a fixed verifier to bypass Streamlit session loss issues
+                # This ensures the callback always matches the request without relying on unstable session state
+                FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
+                
+                google_url, verifier = supabase.get_oauth_url("google", redirect_url, fixed_verifier=FIXED_VERIFIER)
                 st.session_state.oauth_verifier = verifier
                 
                 # Use link_button to open the Google Auth URL

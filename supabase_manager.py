@@ -59,15 +59,18 @@ class SupabaseManager:
         endpoint = f"{self.url}/auth/v1/logout"
         requests.post(endpoint, headers=self._get_headers(access_token))
 
-    def get_oauth_url(self, provider, redirect_to):
+    def get_oauth_url(self, provider, redirect_to, fixed_verifier=None):
         """
         Generates the OAuth URL for the given provider using PKCE flow.
         Returns (auth_url, code_verifier)
         """
         # Force cache bust
         # 1. Generate Code Verifier
-        # Random string between 43-128 chars
-        code_verifier = secrets.token_urlsafe(96)[:128]
+        # Use fixed verifier if provided (solves Streamlit session loss), else random
+        if fixed_verifier:
+            code_verifier = fixed_verifier
+        else:
+            code_verifier = secrets.token_urlsafe(96)[:128]
         
         # 2. Generate Code Challenge (SHA256 of verifier, base64url encoded)
         hashed = hashlib.sha256(code_verifier.encode('utf-8')).digest()
