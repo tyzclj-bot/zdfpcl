@@ -202,3 +202,18 @@ class SupabaseManager:
             print(f"Error fetching history: {e}")
             return []
 
+    def get_admin_stats(self, access_token):
+        """Fetch admin stats (User count, Invoice count) via RPC"""
+        endpoint = f"{self.url}/rest/v1/rpc/get_admin_stats"
+        try:
+            # We must use POST for RPC calls in Supabase
+            response = requests.post(endpoint, headers=self._get_headers(access_token))
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"Admin RPC failed: {response.text}")
+                return None
+        except Exception as e:
+            print(f"Error fetching admin stats: {e}")
+            return None
+
