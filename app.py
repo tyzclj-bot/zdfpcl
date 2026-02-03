@@ -202,11 +202,8 @@ def main():
                                 
                                 st.success("Logged in with Google successfully!")
                                 
-                                # Manual button to break loops
-                                if st.button("Go to Dashboard", type="primary"):
-                                    st.rerun()
-                                    
-                                time.sleep(2) # Give UI a moment to show success
+                                # Auto-redirect
+                                time.sleep(0.5) 
                                 st.rerun()
                     except Exception as e:
                         # Improved Error Logging
@@ -288,6 +285,20 @@ def main():
                     st.session_state.access_token = None
                     st.session_state.credits = 0
                     st.rerun()
+
+                # --- ADMIN DASHBOARD (Sidebar) ---
+                # Only visible to tyzclj@gmail.com
+                if st.session_state.user.email == "tyzclj@gmail.com":
+                    st.markdown("---")
+                    st.markdown("### 👑 Admin Stats")
+                    
+                    if hasattr(supabase, 'get_admin_stats'):
+                        admin_stats = supabase.get_admin_stats(st.session_state.access_token)
+                        if admin_stats:
+                            st.metric("Users", admin_stats.get('total_users', 0))
+                            st.metric("Invoices", admin_stats.get('total_invoices', 0))
+                    else:
+                        st.caption("Admin stats unavailable")
             else:
                 # Login / Register Tabs
                 
@@ -668,49 +679,6 @@ def main():
                         st.info("No processing history found.")
                 else:
                     st.warning("Please redeploy the app to update the Supabase Manager (missing get_invoice_history).")
-
-        # --- ADMIN DASHBOARD ---
-        # Only visible to tyzclj@gmail.com
-        if st.session_state.user and st.session_state.user.email == "tyzclj@gmail.com":
-            st.divider()
-            st.markdown("### 👑 Admin Dashboard")
-            
-            if hasattr(supabase, 'get_admin_stats'):
-                with st.spinner("Fetching admin stats..."):
-                    admin_stats = supabase.get_admin_stats(st.session_state.access_token)
-                    
-                    if admin_stats:
-                        ad1, ad2 = st.columns(2)
-                        with ad1:
-                            st.metric("Total Registered Users", admin_stats.get('total_users', 0))
-                        with ad2:
-                            st.metric("Total Invoices Processed", admin_stats.get('total_invoices', 0))
-                    else:
-                        st.warning("Could not fetch admin stats. Please check SQL setup.")
-                        st.code("""
-                        -- Run this in Supabase SQL Editor
-                        create or replace function public.get_admin_stats()
-                        returns json
-                        language plpgsql
-                        security definer
-                        as $$
-                        declare
-                          user_count int;
-                          invoice_count int;
-                          caller_email text;
-                        begin
-                          select auth.jwt() ->> 'email' into caller_email;
-                          if caller_email <> 'tyzclj@gmail.com' then
-                            raise exception 'Access Denied';
-                          end if;
-                          select count(*) into user_count from public.user_credits;
-                          select count(*) into invoice_count from public.invoice_history;
-                          return json_build_object('total_users', user_count, 'total_invoices', invoice_count);
-                        end;
-                        $$;
-                        """, language="sql")
-            else:
-                 st.info("Admin features not deployed yet.")
 
 
 if __name__ == "__main__":
