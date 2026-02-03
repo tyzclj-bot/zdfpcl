@@ -297,8 +297,10 @@ def main():
                         if admin_stats:
                             st.metric("Users", admin_stats.get('total_users', 0))
                             st.metric("Invoices", admin_stats.get('total_invoices', 0))
+                        else:
+                            st.error("无法获取数据，请确保已运行 admin_setup.sql")
                     else:
-                        st.caption("Admin stats unavailable")
+                        st.warning("管理员功能代码未加载，请在后台 Reboot App")
             else:
                 # Login / Register Tabs
                 
