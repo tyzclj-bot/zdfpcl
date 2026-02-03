@@ -17,11 +17,22 @@ from tempfile import NamedTemporaryFile
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="AI Invoice Intelligence",
+    page_title="AI Invoice Parser - QuickBooks Automation & Email to Bill",
     page_icon="🧾",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# --- SEO Metadata Injection ---
+st.markdown("""
+    <script>
+    document.title = "AI Invoice Parser - QuickBooks Automation & Email to Bill";
+    var meta = document.createElement('meta');
+    meta.name = "description";
+    meta.content = "Automate your bookkeeping with AI Invoice Parser. Seamlessly sync PDF invoices to QuickBooks Online. The best Email to Bill solution for small businesses.";
+    document.getElementsByTagName('head')[0].appendChild(meta);
+    </script>
+""", unsafe_allow_html=True)
 
 # --- Custom Styling (Modern Western Aesthetic) ---
 st.markdown("""
@@ -721,6 +732,16 @@ def main():
                         st.info("No processing history found.")
                 else:
                     st.warning("Please redeploy the app to update the Supabase Manager (missing get_invoice_history).")
+
+    # --- Footer ---
+    st.markdown("""
+        <div style="text-align: center; margin-top: 5rem; padding-bottom: 2rem; color: #94a3b8; font-size: 0.875rem;">
+            <p>AI Invoice Intelligence &copy; 2025</p>
+            <a href="#" style="color: #64748b; text-decoration: none; margin: 0 10px;">Privacy Policy</a>
+            <a href="#" style="color: #64748b; text-decoration: none; margin: 0 10px;">Terms of Service</a>
+            <a href="#" style="color: #4f46e5; text-decoration: none; font-weight: 600; margin: 0 10px;">Become an Affiliate</a>
+        </div>
+    """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
