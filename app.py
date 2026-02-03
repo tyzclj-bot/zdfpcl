@@ -635,35 +635,39 @@ def main():
         with st.expander("🕒 Processing History", expanded=False):
             with st.spinner("Loading history..."):
                  # Fetch history
-                history = supabase.get_invoice_history(st.session_state.user.id, st.session_state.access_token)
-                
-                if history:
-                    # Convert to DataFrame
-                    df_history = pd.DataFrame(history)
+                # Safety check for stale deployments where method might be missing
+                if hasattr(supabase, 'get_invoice_history'):
+                    history = supabase.get_invoice_history(st.session_state.user.id, st.session_state.access_token)
                     
-                    # Column mapping
-                    cols_to_show = {
-                        "created_at": "Date",
-                        "vendor_name": "Vendor", 
-                        "invoice_number": "Invoice #", 
-                        "total_amount": "Amount", 
-                        "currency": "Currency"
-                    }
-                    
-                    # Filter and Rename
-                    available_cols = [c for c in cols_to_show.keys() if c in df_history.columns]
-                    df_history = df_history[available_cols].rename(columns=cols_to_show)
-                    
-                    # Format Date
-                    if "Date" in df_history.columns:
-                        try:
-                            df_history["Date"] = pd.to_datetime(df_history["Date"]).dt.strftime("%Y-%m-%d %H:%M")
-                        except:
-                            pass
-                    
-                    st.dataframe(df_history, use_container_width=True, hide_index=True)
+                    if history:
+                        # Convert to DataFrame
+                        df_history = pd.DataFrame(history)
+                        
+                        # Column mapping
+                        cols_to_show = {
+                            "created_at": "Date",
+                            "vendor_name": "Vendor", 
+                            "invoice_number": "Invoice #", 
+                            "total_amount": "Amount", 
+                            "currency": "Currency"
+                        }
+                        
+                        # Filter and Rename
+                        available_cols = [c for c in cols_to_show.keys() if c in df_history.columns]
+                        df_history = df_history[available_cols].rename(columns=cols_to_show)
+                        
+                        # Format Date
+                        if "Date" in df_history.columns:
+                            try:
+                                df_history["Date"] = pd.to_datetime(df_history["Date"]).dt.strftime("%Y-%m-%d %H:%M")
+                            except:
+                                pass
+                        
+                        st.dataframe(df_history, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No processing history found.")
                 else:
-                    st.info("No processing history found.")
+                    st.warning("Please redeploy the app to update the Supabase Manager (missing get_invoice_history).")
 
 if __name__ == "__main__":
     main()
