@@ -263,7 +263,7 @@ def main():
                 st.session_state.credits = profile.get("credits", 0)
                 plan_status = profile.get("plan", "free")
                 
-                st.metric("Credits Remaining", st.session_state.credits)
+                st.metric("Credits Remaining", st.session_state.credits, help="New users start with 5 credits. 1 credit is deducted only after a successful extraction.")
                 
                 # Show Plan Badge
                 if plan_status == 'pro':
