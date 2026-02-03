@@ -339,7 +339,28 @@ def main():
                 st.session_state.oauth_verifier = verifier
                 
                 # Use link_button to open the Google Auth URL
-                st.link_button("Continue with Google", google_url, type="primary", use_container_width=True)
+                # st.link_button("Continue with Google", google_url, type="primary", use_container_width=True)
+                
+                # Use Markdown with target="_self" to open in the SAME tab
+                st.markdown(
+                    f'''
+                    <a href="{google_url}" target="_self" style="text-decoration:none;">
+                        <button style="
+                            width: 100%;
+                            background-color: #FF4B4B;
+                            color: white;
+                            padding: 10px;
+                            border: none;
+                            border-radius: 5px;
+                            font-weight: bold;
+                            cursor: pointer;
+                        ">
+                            Continue with Google
+                        </button>
+                    </a>
+                    ''', 
+                    unsafe_allow_html=True
+                )
                 
                 st.divider()
 
