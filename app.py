@@ -91,7 +91,7 @@ st.markdown("""
 
 @st.cache_resource
 def get_extractor():
-    """使用 Streamlit 缓存来创建并复用 AI 提取器实例"""
+    """Use Streamlit cache to create and reuse AI extractor instance"""
     return AIInvoiceExtractor()
 
 def init_supabase():
@@ -499,7 +499,7 @@ def main():
                         st.error("Insufficient credits!")
                         return
 
-                    extractor = get_extractor() # 获取缓存的实例
+                    extractor = get_extractor() # Get cached instance
                     with st.spinner("🤖 AI is analyzing your document..."):
                         try:
                             file_bytes = uploaded_file.getvalue()
@@ -514,14 +514,14 @@ def main():
                                 data = extractor.process_pdf(tmp_path)
                                 os.unlink(tmp_path)
 
-                            # 检查返回数据的类型
+                            # Check return data type
                             if isinstance(data, dict) and data.get("error"):
                                 st.error(f"AI Processing Error: {data['error']}")
-                                # 清除旧数据（如有）
+                                # Clear old data (if any)
                                 if 'invoice_data' in st.session_state:
                                     del st.session_state['invoice_data']
                             else:
-                                # 如果是 Pydantic 对象，转换为字典以便存储和显示
+                                # If Pydantic object, convert to dict for storage and display
                                 if not isinstance(data, dict):
                                     data = data.model_dump()
                                 
@@ -549,12 +549,12 @@ def main():
                 if 'invoice_data' in st.session_state:
                     data = st.session_state['invoice_data']
 
-                    # 如果是诊断模式的结果，则特殊显示
+                    # If diagnostic mode result, display specially
                     if "diagnostic_description" in data:
                         st.subheader("AI Vision Diagnostic Report")
                         st.markdown(data["diagnostic_description"])
                         st.info("This is a diagnostic run. We are checking the connection to the vision model.")
-                        return # 结束渲染，不显示下面的常规结果
+                        return # Stop rendering, do not display regular results below
 
                     # Key Metrics Row
                     m1, m2, m3 = st.columns(3)
@@ -629,6 +629,41 @@ def main():
                 else:
                     st.info("Upload and process an invoice to see results here.")
                     # Placeholder image or illustration could go here
+
+        # --- Processing History ---
+        st.divider()
+        with st.expander("🕒 Processing History", expanded=False):
+            with st.spinner("Loading history..."):
+                 # Fetch history
+                history = supabase.get_invoice_history(st.session_state.user.id, st.session_state.access_token)
+                
+                if history:
+                    # Convert to DataFrame
+                    df_history = pd.DataFrame(history)
+                    
+                    # Column mapping
+                    cols_to_show = {
+                        "created_at": "Date",
+                        "vendor_name": "Vendor", 
+                        "invoice_number": "Invoice #", 
+                        "total_amount": "Amount", 
+                        "currency": "Currency"
+                    }
+                    
+                    # Filter and Rename
+                    available_cols = [c for c in cols_to_show.keys() if c in df_history.columns]
+                    df_history = df_history[available_cols].rename(columns=cols_to_show)
+                    
+                    # Format Date
+                    if "Date" in df_history.columns:
+                        try:
+                            df_history["Date"] = pd.to_datetime(df_history["Date"]).dt.strftime("%Y-%m-%d %H:%M")
+                        except:
+                            pass
+                    
+                    st.dataframe(df_history, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No processing history found.")
 
 if __name__ == "__main__":
     main()

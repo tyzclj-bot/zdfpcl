@@ -190,3 +190,15 @@ class SupabaseManager:
         }
         requests.post(endpoint, json=record, headers=self._get_headers(access_token))
 
+    def get_invoice_history(self, user_id, access_token):
+        """Fetch invoice processing history for the user"""
+        endpoint = f"{self.url}/rest/v1/invoice_history?user_id=eq.{user_id}&order=created_at.desc"
+        try:
+            response = requests.get(endpoint, headers=self._get_headers(access_token))
+            if response.status_code == 200:
+                return response.json()
+            return []
+        except Exception as e:
+            print(f"Error fetching history: {e}")
+            return []
+
