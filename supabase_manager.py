@@ -178,6 +178,14 @@ class SupabaseManager:
             return True
         return False
 
+    def add_credits(self, user_id, amount, access_token):
+        """Add credits to user (e.g. for promo codes)"""
+        current = self.get_user_credits(user_id, access_token)
+        endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}"
+        payload = {"credits_remaining": current + amount}
+        res = requests.patch(endpoint, json=payload, headers=self._get_headers(access_token))
+        return res.status_code == 200
+
     def log_invoice(self, user_id, invoice_data, access_token):
         """Log the successful extraction to history"""
         endpoint = f"{self.url}/rest/v1/invoice_history"

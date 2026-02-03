@@ -279,6 +279,25 @@ def main():
                     checkout_url = "https://www.paypal.com/invoice/p/#FNC8963Z27RBSCZ5"
                     st.link_button("💎 Upgrade to Pro", checkout_url, type="primary")
 
+                # --- Reddit Promo Section ---
+                with st.expander("🎁 Reddit Exclusive"):
+                    promo_code = st.text_input("Enter Promo Code", key="reddit_promo")
+                    if st.button("Claim Credits"):
+                        if promo_code.strip().upper() == "REDDIT2024":
+                            # Check if already redeemed (simple session check for now)
+                            # Ideally check DB user_metadata
+                            if hasattr(supabase, 'add_credits'):
+                                if supabase.add_credits(st.session_state.user.id, 5, st.session_state.access_token):
+                                    st.toast("Success! +5 Credits Added", icon="🎉")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to add credits.")
+                            else:
+                                st.warning("Please redeploy app to enable this feature.")
+                        else:
+                            st.error("Invalid Code")
+
                 if st.button("Logout"):
                     supabase.sign_out(st.session_state.access_token)
                     st.session_state.user = None
