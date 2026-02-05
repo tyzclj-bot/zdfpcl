@@ -361,7 +361,7 @@ def main():
             <div>
                 <a href="mailto:tyzclj@gmail.com" class="support-link">Support</a>
                 <span style="margin: 0 0.5rem; color: #cbd5e1;">|</span>
-                <a href="#" class="support-link">Docs</a>
+                <a href="#" class="support-link">Docs (v1.1)</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
