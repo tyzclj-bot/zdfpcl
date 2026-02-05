@@ -5,35 +5,36 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 import config
 import os
-import requests # 引入 requests 库
+import requests
+
 
 logger = logging.getLogger(__name__)
 
-# 定义账单明细项的模型
+# Define invoice item model
 class InvoiceItem(BaseModel):
-    description: str = Field(..., description="商品或服务描述")
-    quantity: Optional[float] = Field(None, description="数量")
-    unit_price: Optional[float] = Field(None, description="单价")
-    total_price: float = Field(..., description="总价")
-    category: Optional[str] = Field(None, description="费用科目/类别 (例如: Office Supplies, Meals, Travel)")
+    description: str = Field(..., description="Description of goods or services")
+    quantity: Optional[float] = Field(None, description="Quantity")
+    unit_price: Optional[float] = Field(None, description="Unit price")
+    total_price: float = Field(..., description="Total price")
+    category: Optional[str] = Field(None, description="Expense category (e.g., Office Supplies, Meals, Travel)")
 
-# 定义完整账单的模型
+# Define complete invoice model
 class InvoiceData(BaseModel):
-    vendor_name: str = Field(..., description="销售商/供应商名称")
-    invoice_number: Optional[str] = Field(None, description="账单/发票编号")
-    date: Optional[str] = Field(None, description="账单日期 (YYYY-MM-DD)")
-    due_date: Optional[str] = Field(None, description="到期日 (YYYY-MM-DD)")
-    items: List[InvoiceItem] = Field(default_factory=list, description="账单明细列表")
-    total_amount: float = Field(..., description="账单总金额")
-    currency: str = Field("USD", description="货币符号/代码")
+    vendor_name: str = Field(..., description="Vendor/Seller name")
+    invoice_number: Optional[str] = Field(None, description="Invoice number")
+    date: Optional[str] = Field(None, description="Invoice date (YYYY-MM-DD)")
+    due_date: Optional[str] = Field(None, description="Due date (YYYY-MM-DD)")
+    items: List[InvoiceItem] = Field(default_factory=list, description="List of invoice items")
+    total_amount: float = Field(..., description="Total invoice amount")
+    currency: str = Field("USD", description="Currency code")
 
 class AIInvoiceExtractor:
     def __init__(self):
-        # 保留一个空的初始化，因为我们将手动处理请求
+        # Empty init as we handle requests manually
         pass
 
     def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """从 PDF 中提取所有文字"""
+        """Extract all text from PDF"""
         text = ""
         try:
             with pdfplumber.open(pdf_path) as pdf:
@@ -47,24 +48,24 @@ class AIInvoiceExtractor:
             raise
 
     def parse_with_ai(self, text: str) -> InvoiceData:
-        """使用 DeepSeek 将非结构化文本转换为结构化 JSON"""
+        """Use DeepSeek to convert unstructured text to structured JSON"""
         
         schema = InvoiceData.model_json_schema()
         
         prompt = f"""
-        你是一个专业的财务审计助手。请从以下账单文本中提取关键信息，并按要求的 JSON 格式返回。
+        You are a professional financial audit assistant. Please extract key information from the following invoice text and return it in the required JSON format.
         
-        必须严格遵守以下 JSON Schema:
+        You must strictly follow this JSON Schema:
         {json.dumps(schema, indent=2)}
         
-        账单文本内容:
+        Invoice Text Content:
         ---
         {text}
         ---
         """
 
         try:
-            # 手动构造请求
+            # Manually construct request
             headers = {
                 "Authorization": f"Bearer {config.DEEPSEEK_API_KEY}",
                 "Content-Type": "application/json"
@@ -72,7 +73,7 @@ class AIInvoiceExtractor:
             payload = {
                 "model": "deepseek-chat",
                 "messages": [
-                    {"role": "system", "content": "你是一个只输出结构化 JSON 的财务助手。请直接输出 JSON，不要包含 markdown 格式标记 (如 ```json ... ```)。"},
+                    {"role": "system", "content": "You are a financial assistant that only outputs structured JSON. Please output JSON directly, do not include markdown formatting markers (such as ```json ... ```)."},
                     {"role": "user", "content": prompt}
                 ],
                 "response_format": {"type": "json_object"},
@@ -93,7 +94,7 @@ class AIInvoiceExtractor:
             raise
 
     def process_pdf(self, pdf_path: str) -> dict:
-        """处理 PDF 的完整流程：提取文本 -> AI 解析 -> 返回 dict"""
+        """Full PDF processing flow: Extract text -> AI Parse -> Return dict"""
         logger.info(f"Processing PDF: {pdf_path}")
         raw_text = self.extract_text_from_pdf(pdf_path)
         if not raw_text.strip():
@@ -104,7 +105,7 @@ class AIInvoiceExtractor:
 
     def extract_from_image(self, image_bytes: bytes) -> dict:
         """
-        使用 EasyOCR 从图片中提取文字，然后发送给 DeepSeek 进行结构化处理。
+        Use EasyOCR to extract text from images, then send to DeepSeek for structuring.
         """
         logger.info("Starting OCR processing for image...")
         try:
@@ -113,33 +114,33 @@ class AIInvoiceExtractor:
             import cv2
         except ImportError:
             return {
-                "error": "缺少必要的 OCR 库。请在终端运行: pip install easyocr opencv-python-headless"
+                "error": "Missing necessary OCR libraries. Please run in terminal: pip install easyocr opencv-python-headless"
             }
 
         try:
-            # 1. 将图片字节流转换为 OpenCV 格式
+            # 1. Convert image bytes to OpenCV format
             nparr = np.frombuffer(image_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
             if img is None:
-                return {"error": "无法解码图像文件"}
+                return {"error": "Unable to decode image file"}
 
-            # 2. 初始化 EasyOCR (支持中文和英文)
-            # 注意：第一次运行会下载模型，可能需要一点时间
+            # 2. Initialize EasyOCR (Supports Chinese and English)
+            # Note: First run will download model, may take some time
             reader = easyocr.Reader(['ch_sim', 'en'], gpu=False) 
             
-            # 3. 提取文字
+            # 3. Extract text
             result = reader.readtext(img, detail=0)
             text = "\n".join(result)
             
             logger.info(f"OCR extracted {len(text)} characters.")
             
             if not text.strip():
-                return {"error": "OCR 未能从图片中识别出任何文字。"}
+                return {"error": "OCR failed to identify any text from the image."}
 
-            # 4. 发送给 DeepSeek 进行结构化
+            # 4. Send to DeepSeek for structuring
             return self.parse_with_ai(text)
 
         except Exception as e:
             logger.error(f"OCR processing failed: {e}")
-            return {"error": f"图片识别失败: {str(e)}"}
+            return {"error": f"Image recognition failed: {str(e)}"}

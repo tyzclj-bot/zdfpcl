@@ -5,7 +5,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
 def create_mock_pdf(file_path):
-    """生成一个模拟的账单 PDF 用于测试"""
+    """Generate a mock invoice PDF for testing"""
     c = canvas.Canvas(file_path, pagesize=letter)
     c.setFont("Helvetica-Bold", 16)
     c.drawString(100, 750, "MOCK INVOICE")
@@ -24,44 +24,44 @@ def create_mock_pdf(file_path):
     c.drawString(100, 565, "Currency: USD")
     
     c.save()
-    print(f"已生成模拟账单: {file_path}")
+    print(f"Mock invoice generated: {file_path}")
 
 def check_env():
-    """检查并引导配置 .env"""
+    """Check and guide .env configuration"""
     if not os.path.exists(".env"):
         if os.path.exists(".env.example"):
-            print("正在从 .env.example 创建 .env 文件...")
+            print("Creating .env file from .env.example...")
             with open(".env.example", "r", encoding="utf-8") as f:
                 content = f.read()
             with open(".env", "w", encoding="utf-8") as f:
                 f.write(content)
-            print("!!! 请在 .env 文件中填入你的 DEEPSEEK_API_KEY 后再继续 !!!")
+            print("!!! Please enter your DEEPSEEK_API_KEY in the .env file before continuing !!!")
             return False
     return True
 
 def run_test():
-    # 1. 安装依赖
-    print("正在检查/安装依赖库...")
+    # 1. Install dependencies
+    print("Checking/Installing dependencies...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
-    # 2. 检查 .env
+    # 2. Check .env
     if not check_env():
         return
 
-    # 3. 准备测试文件
+    # 3. Prepare test file
     test_pdf = "test_invoice.pdf"
     if not os.path.exists(test_pdf):
         create_mock_pdf(test_pdf)
 
-    # 4. 运行主程序
+    # 4. Run main program
     print("\n" + "="*40)
-    print("开始运行 AI 账单提取测试...")
+    print("Starting AI Invoice Extraction Test...")
     print("="*40 + "\n")
     
     try:
         subprocess.run([sys.executable, "main.py", test_pdf, "--sync"], check=True)
     except subprocess.CalledProcessError as e:
-        print(f"\n运行失败: 请确保你的 DEEPSEEK_API_KEY 已正确配置在 .env 中。")
+        print(f"\nRun failed: Please ensure your DEEPSEEK_API_KEY is correctly configured in .env.")
 
 if __name__ == "__main__":
     run_test()

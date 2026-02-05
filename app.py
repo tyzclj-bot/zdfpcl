@@ -126,7 +126,7 @@ from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 def generate_quickbooks_csv(data):
     """
     Generate CSV for QuickBooks Online Import.
-    Headers: 供应商, 账单编号, 账单日期, 到期日, 总金额, 单项金额, 单项科目, 单项描述
+    Headers: Vendor, Invoice No, Invoice Date, Due Date, Total Amount, Line Amount, Line Account, Line Description
     Date Format: MM/DD/YYYY
     Amount: 2 decimal places
     Encoding: utf-8-sig
@@ -141,7 +141,7 @@ def generate_quickbooks_csv(data):
         except:
             return date_str
 
-    headers = ["供应商", "账单编号", "账单日期", "到期日", "总金额", "单项金额", "单项科目", "单项描述"]
+    headers = ["Vendor", "Invoice No", "Invoice Date", "Due Date", "Total Amount", "Line Amount", "Line Account", "Line Description"]
     rows = []
     
     vendor = data.get("vendor_name", "")
@@ -173,27 +173,27 @@ def generate_quickbooks_csv(data):
             description = item.get("description", "")
             
             row = {
-                "供应商": vendor,
-                "账单编号": inv_num,
-                "账单日期": inv_date,
-                "到期日": due_date,
-                "总金额": total_str,
-                "单项金额": line_amount_str,
-                "单项科目": category,
-                "单项描述": description
+                "Vendor": vendor,
+                "Invoice No": inv_num,
+                "Invoice Date": inv_date,
+                "Due Date": due_date,
+                "Total Amount": total_str,
+                "Line Amount": line_amount_str,
+                "Line Account": category,
+                "Line Description": description
             }
             rows.append(row)
     else:
         # Fallback if no items found
         row = {
-            "供应商": vendor,
-            "账单编号": inv_num,
-            "账单日期": inv_date,
-            "到期日": due_date,
-            "总金额": total_str,
-            "单项金额": total_str, # Assume single line item equal to total
-            "单项科目": "Uncategorized Expense",
-            "单项描述": "Invoice Total"
+            "Vendor": vendor,
+            "Invoice No": inv_num,
+            "Invoice Date": inv_date,
+            "Due Date": due_date,
+            "Total Amount": total_str,
+            "Line Amount": total_str, # Assume single line item equal to total
+            "Line Account": "Uncategorized Expense",
+            "Line Description": "Invoice Total"
         }
         rows.append(row)
         
@@ -405,9 +405,9 @@ def main():
                             st.metric("Users", admin_stats.get('total_users', 0))
                             st.metric("Invoices", admin_stats.get('total_invoices', 0))
                         else:
-                            st.error("无法获取数据，请确保已运行 admin_setup.sql")
+                            st.error("Unable to fetch data, please ensure admin_setup.sql has been run")
                     else:
-                        st.warning("管理员功能代码未加载，请在后台 Reboot App")
+                        st.warning("Admin functionality code not loaded, please Reboot App in the dashboard")
             else:
                 # Login / Register Tabs
                 
@@ -618,7 +618,7 @@ def main():
             # Wrap in a container for card-like look
             with st.container(border=True):
                 st.subheader("1. Upload Invoice")
-        uploaded_file = st.file_uploader("Drop your invoice here (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
+        uploaded_file = st.file_uploader("Upload Invoice", type=["pdf", "png", "jpg", "jpeg"])
         
         # Trust Signals
         st.info("🛡️ **7-Day Money Back Guarantee**  \n🔒 **Secure Payment by Lemon Squeezy**")
@@ -712,8 +712,33 @@ def main():
                     with tab1:
                         if data.get('items'):
                             df = pd.DataFrame(data['items'])
-                            # Modern styling for dataframe
-                            st.dataframe(df, use_container_width=True, hide_index=True)
+                            # Editable Dataframe
+                            edited_df = st.data_editor(
+                                df,
+                                num_rows="dynamic",
+                                use_container_width=True,
+                                key="invoice_items_editor"
+                            )
+                            
+                            # Update session state with edited data
+                            # Note: st.data_editor returns the edited dataframe immediately
+                            # We need to reflect these changes in the data object used for export
+                            
+                            # Convert back to list of dicts
+                            updated_items = edited_df.to_dict('records')
+                            
+                            # Update the main data object in session state
+                            # This ensures that when the user clicks 'Download', they get the edited version
+                            st.session_state['invoice_data']['items'] = updated_items
+                            
+                            # Optional: Recalculate total if needed, but for now we trust the user's edits
+                            # or we could sum up the total_price column
+                            try:
+                                new_total = edited_df['total_price'].sum()
+                                st.session_state['invoice_data']['total_amount'] = new_total
+                            except:
+                                pass
+                                
                         else:
                             st.write("No line items detected.")
 
