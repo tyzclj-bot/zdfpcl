@@ -43,15 +43,14 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
-    /* Hide Streamlit Default Elements - ADJUSTED FOR SIDEBAR VISIBILITY */
-    #MainMenu {visibility: hidden !important;}
-    footer {visibility: hidden !important;}
-    /* header {visibility: hidden !important;} */ /* This hides the sidebar toggle! */
-    /* .stApp > header {display: none;} */ /* This also hides the sidebar toggle! */
+    /* Hide Streamlit Default Elements - SAFEST MODE */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    /* Only hide the top decoration bar and the right-side menu */
-    [data-testid="stDecoration"] {visibility: hidden !important;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
+    /* Explicitly ensure the header and sidebar toggle are visible */
+    header {visibility: visible !important;}
+    [data-testid="stHeader"] {visibility: visible !important;}
+    [data-testid="stSidebarCollapsedControl"] {visibility: visible !important;}
     
     .main {
         background-color: #f8fafc;
