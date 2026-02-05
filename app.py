@@ -123,6 +123,83 @@ def init_supabase():
 
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 
+def generate_quickbooks_csv(data):
+    """
+    Generate CSV for QuickBooks Online Import.
+    Headers: 供应商, 账单编号, 账单日期, 到期日, 总金额, 单项金额, 单项科目, 单项描述
+    Date Format: MM/DD/YYYY
+    Amount: 2 decimal places
+    Encoding: utf-8-sig
+    """
+    def format_date_us(date_str):
+        if not date_str:
+            return ""
+        try:
+            # Try parsing various formats
+            dt = pd.to_datetime(date_str)
+            return dt.strftime("%m/%d/%Y")
+        except:
+            return date_str
+
+    headers = ["供应商", "账单编号", "账单日期", "到期日", "总金额", "单项金额", "单项科目", "单项描述"]
+    rows = []
+    
+    vendor = data.get("vendor_name", "")
+    inv_num = data.get("invoice_number", "")
+    inv_date = format_date_us(data.get("date", ""))
+    due_date = format_date_us(data.get("due_date", ""))
+    
+    # Ensure total_amount is float
+    try:
+        total = float(data.get("total_amount", 0))
+        total_str = "{:.2f}".format(total)
+    except:
+        total_str = "0.00"
+    
+    items = data.get("items", [])
+    
+    if items:
+        for item in items:
+            try:
+                line_amount = float(item.get("total_price", 0))
+                line_amount_str = "{:.2f}".format(line_amount)
+            except:
+                line_amount_str = "0.00"
+            
+            category = item.get("category")
+            if not category:
+                category = "Uncategorized Expense"
+            
+            description = item.get("description", "")
+            
+            row = {
+                "供应商": vendor,
+                "账单编号": inv_num,
+                "账单日期": inv_date,
+                "到期日": due_date,
+                "总金额": total_str,
+                "单项金额": line_amount_str,
+                "单项科目": category,
+                "单项描述": description
+            }
+            rows.append(row)
+    else:
+        # Fallback if no items found
+        row = {
+            "供应商": vendor,
+            "账单编号": inv_num,
+            "账单日期": inv_date,
+            "到期日": due_date,
+            "总金额": total_str,
+            "单项金额": total_str, # Assume single line item equal to total
+            "单项科目": "Uncategorized Expense",
+            "单项描述": "Invoice Total"
+        }
+        rows.append(row)
+        
+    df = pd.DataFrame(rows, columns=headers)
+    return df.to_csv(index=False).encode('utf-8-sig')
+
 # --- App Logic ---
 FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
 
@@ -662,7 +739,7 @@ def main():
                                     st.success("Synchronized with ERP system.")
                     
                     with c2:
-                        csv = df_export.to_csv(index=False).encode('utf-8')
+                        csv = generate_quickbooks_csv(data)
                         st.download_button(
                             label="📄 Download CSV",
                             data=csv,

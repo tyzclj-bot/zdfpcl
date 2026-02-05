@@ -15,12 +15,14 @@ class InvoiceItem(BaseModel):
     quantity: Optional[float] = Field(None, description="数量")
     unit_price: Optional[float] = Field(None, description="单价")
     total_price: float = Field(..., description="总价")
+    category: Optional[str] = Field(None, description="费用科目/类别 (例如: Office Supplies, Meals, Travel)")
 
 # 定义完整账单的模型
 class InvoiceData(BaseModel):
     vendor_name: str = Field(..., description="销售商/供应商名称")
     invoice_number: Optional[str] = Field(None, description="账单/发票编号")
     date: Optional[str] = Field(None, description="账单日期 (YYYY-MM-DD)")
+    due_date: Optional[str] = Field(None, description="到期日 (YYYY-MM-DD)")
     items: List[InvoiceItem] = Field(default_factory=list, description="账单明细列表")
     total_amount: float = Field(..., description="账单总金额")
     currency: str = Field("USD", description="货币符号/代码")
