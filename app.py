@@ -361,7 +361,7 @@ def main():
             <div>
                 <a href="mailto:tyzclj@gmail.com" class="support-link">Support</a>
                 <span style="margin: 0 0.5rem; color: #cbd5e1;">|</span>
-                <a href="#" class="support-link">Docs (v1.2)</a>
+                <a href="#" class="support-link">Docs</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -408,6 +408,13 @@ def main():
             # Handle OAuth Callback (Check if returning from Google)
             # Use query_params directly which is more robust in newer Streamlit versions
             if 'code' in st.query_params:
+                # --- FIX: Handle Browser Back Button ---
+                # If user is already logged in, ignore the code (it might be old/used)
+                # and just clean the URL to prevent "Invalid Grant" errors or UI stutter.
+                if st.session_state.user is not None:
+                    st.query_params.clear()
+                    st.rerun()
+
                 code = st.query_params['code']
                 
                 # Attempt to retrieve verifier from state (Stateless) or Session (Stateful)
