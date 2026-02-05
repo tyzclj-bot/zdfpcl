@@ -200,6 +200,21 @@ def generate_quickbooks_csv(data):
     df = pd.DataFrame(rows, columns=headers)
     return df.to_csv(index=False).encode('utf-8-sig')
 
+def get_sample_csv():
+    """Generate a sample CSV file for users to preview the format"""
+    data = {
+        "Vendor": ["Staples", "Staples"],
+        "Invoice No": ["INV-2024-001", "INV-2024-001"],
+        "Invoice Date": ["01/15/2024", "01/15/2024"],
+        "Due Date": ["02/14/2024", "02/14/2024"],
+        "Total Amount": ["150.00", "150.00"],
+        "Line Amount": ["50.00", "100.00"],
+        "Line Account": ["Office Supplies", "Office Equipment"],
+        "Line Description": ["Printer Paper (Ream)", "Ergonomic Office Chair"]
+    }
+    df = pd.DataFrame(data)
+    return df.to_csv(index=False).encode('utf-8-sig')
+
 # --- App Logic ---
 FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
 
@@ -588,19 +603,40 @@ def main():
         
         st.divider()
         
+        # --- Sample Download Section ---
+        st.markdown("""
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h3>🔍 See what you get</h3>
+            <p style="color: #64748b;">Download a sample CSV to see exactly how we format your data for QuickBooks Online.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        _, col_dl, _ = st.columns([1, 1, 1])
+        with col_dl:
+            st.download_button(
+                label="📄 Download Sample CSV",
+                data=get_sample_csv(),
+                file_name="quickbooks_sample_export.csv",
+                mime="text/csv",
+                use_container_width=True,
+                type="secondary"
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
         # --- FAQ Section ---
         st.subheader("Frequently Asked Questions")
         
         faq1, faq2, faq3 = st.columns(3)
         with faq1:
-            st.markdown("**Is it secure?**")
-            st.caption("Yes, we use AES encryption to protect your data.")
+            st.markdown("**Is my data secure?**")
+            st.caption("Yes. We use SSL encryption and do not permanently store your files. All data is processed with bank-grade security protocols.")
         with faq2:
-            st.markdown("**Does it support PDFs?**")
-            st.caption("Yes, we support both image files (PNG, JPG) and PDFs.")
+            st.markdown("**Can it handle non-standard invoices?**")
+            st.caption("Absolutely. Our AI engine outperforms traditional OCR by understanding context, allowing it to accurately parse complex and non-standard layouts.")
         with faq3:
-            st.markdown("**How do I import to QuickBooks?**")
-            st.caption("Simply download our CSV export and use the standard QuickBooks Import feature.")
+            st.markdown("**Can I request a custom CSV format?**")
+            st.caption("Yes. Please contact us for custom integrations. We support a wide range of accounting software and formats.")
         
     else:
         # DASHBOARD VIEW (Logged In)
@@ -835,15 +871,53 @@ def main():
                 else:
                     st.warning("Please redeploy the app to update the Supabase Manager (missing get_invoice_history).")
 
-    # --- Footer ---
+    # --- Footer & Trust Section ---
+    st.markdown("---")
+    
+    # Trust Badges
     st.markdown("""
-        <div style="text-align: center; margin-top: 5rem; padding-bottom: 2rem; color: #94a3b8; font-size: 0.875rem;">
-            <p>AI Invoice Intelligence &copy; 2025</p>
-            <a href="#" style="color: #64748b; text-decoration: none; margin: 0 10px;">Privacy Policy</a>
-            <a href="#" style="color: #64748b; text-decoration: none; margin: 0 10px;">Terms of Service</a>
-            <a href="#" style="color: #4f46e5; text-decoration: none; font-weight: 600; margin: 0 10px;">Become an Affiliate</a>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #475569;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span style="font-weight: 600; font-size: 0.9rem;">256-bit SSL Encrypted</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #475569;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span style="font-weight: 600; font-size: 0.9rem;">Bank-Level Security</span>
+            </div>
+            <div style="opacity: 0.8;">
+                 <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Secured by Stripe" height="25">
+            </div>
         </div>
     """, unsafe_allow_html=True)
+
+    # Footer Links (Using columns for layout)
+    f_col1, f_col2, f_col3 = st.columns([1, 2, 1])
+    
+    with f_col2:
+        st.markdown("""
+            <div style="text-align: center; color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                &copy; 2025 AI Invoice Intelligence. All rights reserved.
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Legal Links using Streamlit buttons styled as text
+        # We use a container to group them
+        with st.container():
+            # Centering buttons in Streamlit is tricky, we use columns inside the center column
+            l1, l2, l3 = st.columns([1, 1, 1])
+            with l1:
+                if st.button("Privacy Policy", key="footer_privacy", use_container_width=True):
+                    st.session_state.show_legal = "privacy"
+                    st.rerun()
+            with l2:
+                if st.button("Terms of Service", key="footer_terms", use_container_width=True):
+                    st.session_state.show_legal = "terms"
+                    st.rerun()
+            with l3:
+                 st.link_button("Support", "mailto:tyzclj@gmail.com", use_container_width=True)
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
