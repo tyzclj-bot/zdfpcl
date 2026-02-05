@@ -553,88 +553,54 @@ def main():
                     
                     if hasattr(supabase, 'get_admin_stats'):
                         admin_stats = supabase.get_admin_stats(st.session_state.access_token)
-                        if admin_stats:
-                            st.metric("Users", admin_stats.get('total_users', 0))
-                            st.metric("Invoices", admin_stats.get('total_invoices', 0))
-                        else:
-                            st.error("Unable to fetch data, please ensure admin_setup.sql has been run")
+                        st.markdown(f"**Total Users:** {admin_stats.get('user_count', 0)}")
+                        st.markdown(f"**Total Invoices:** {admin_stats.get('invoice_count', 0)}")
                     else:
-                        st.warning("Admin functionality code not loaded, please Reboot App in the dashboard")
-            else:
-                # Login / Register Tabs
-                
-                # --- Google OAuth Button ---
-                # Determine Redirect URL (Prioritize Secrets, then Env, then Default to Prod)
-                redirect_url = "https://quickbills-ai.streamlit.app/"
-                
-                if "APP_URL" in st.secrets:
-                    redirect_url = st.secrets["APP_URL"]
-                elif os.getenv("APP_URL"):
-                    redirect_url = os.getenv("APP_URL")
-                
-                # Generate URL and Verifier
-                # We save verifier to session_state so we can use it when user returns
-                # Use FIXED_VERIFIER to ensure session loss doesn't break the flow
-                google_url, verifier = supabase.get_oauth_url("google", redirect_url, fixed_verifier=FIXED_VERIFIER)
-                st.session_state.oauth_verifier = verifier
-                
-                # Use link_button to open the Google Auth URL
-                # st.link_button("Continue with Google", google_url, type="primary", use_container_width=True)
-                
-                # Use Markdown with target="_self" to open in the SAME tab
-                st.markdown(
-                    f'''
-                    <a href="{google_url}" target="_self" style="text-decoration:none;">
-                        <button style="
-                            width: 100%;
-                            background-color: #FF4B4B;
-                            color: white;
-                            padding: 10px;
-                            border: none;
-                            border-radius: 5px;
-                            font-weight: bold;
-                            cursor: pointer;
-                        ">
-                            Continue with Google
-                        </button>
-                    </a>
-                    ''', 
-                    unsafe_allow_html=True
-                )
-                
-                st.divider()
+                        st.info("Admin stats module not loaded.")
 
-                tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
+            else:
+                # --- Login / Register Buttons ---
+                st.info("Log in to start automating your invoices.")
                 
-                with tab_login:
-                    email = st.text_input("Email", key="login_email")
-                    password = st.text_input("Password", type="password", key="login_pass")
-                    if st.button("Sign In"):
-                        try:
-                            res = supabase.sign_in(email, password)
-                            if res and res.user:
-                                st.session_state.user = res.user
-                                st.session_state.access_token = res.session.access_token
-                                st.success("Logged in successfully!")
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"Login failed: {str(e)}")
+                # Google Login (Primary)
+                try:
+                    # Using FIXED_VERIFIER for stability
+                    redirect_url = "https://quickbills-ai.streamlit.app" 
+                    auth_url = supabase.get_google_auth_url(redirect_url, FIXED_VERIFIER)
+                    st.link_button("Continue with Google", auth_url, type="primary", use_container_width=True)
+                except Exception as e:
+                    st.error(f"Auth Error: {e}")
                 
-                with tab_signup:
-                    s_email = st.text_input("Email", key="signup_email")
-                    s_password = st.text_input("Password", type="password", key="signup_pass")
-                    if st.button("Create Account"):
-                        try:
-                            res = supabase.sign_up(s_email, s_password)
-                            if res and res.user:
-                                st.success("Account created! Please check your email for confirmation (if enabled) or sign in.")
-                                # Auto login if session provided
-                                if res.session:
+                st.markdown("""
+                    <div style="text-align: center; margin: 1rem 0; color: #64748b; font-size: 0.9rem;">
+                        OR
+                    </div>
+                """, unsafe_allow_html=True)
+
+                # Email Login (Secondary)
+                with st.expander("Continue with Email"):
+                    email = st.text_input("Email Address")
+                    password = st.text_input("Password", type="password")
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("Log In", use_container_width=True):
+                            try:
+                                res = supabase.sign_in(email, password)
+                                if res and res.user:
                                     st.session_state.user = res.user
                                     st.session_state.access_token = res.session.access_token
                                     st.rerun()
-                        except Exception as e:
-                            st.error(f"Signup failed: {str(e)}")
+                            except Exception as e:
+                                st.error(str(e))
+                    with c2:
+                        if st.button("Sign Up", use_container_width=True):
+                            try:
+                                res = supabase.sign_up(email, password)
+                                if res and res.user:
+                                    st.success("Account created! Please check your email to confirm.")
+                            except Exception as e:
+                                st.error(str(e))
 
         st.divider()
         
@@ -1002,13 +968,22 @@ def main():
                                     st.success("Synchronized with ERP system.")
                     
                     with c2:
+                        # 2. Export Button
                         csv = generate_quickbooks_csv(data)
+                        
+                        # Generate Professional Filename
+                        # Format: QuickBills_Export_YYYY-MM-DD.csv
+                        from datetime import datetime
+                        date_str = datetime.now().strftime("%Y-%m-%d")
+                        filename = f"QuickBills_Export_{date_str}.csv"
+                        
                         st.download_button(
-                            label="📥 Export to QuickBooks CSV",
+                            label="📥 Download QuickBooks CSV",
                             data=csv,
-                            file_name=f"invoice_{data.get('invoice_number', 'export')}.csv",
+                            file_name=filename,
                             mime="text/csv",
-                            type="primary"
+                            type="primary",
+                            use_container_width=True
                         )
 
                     with c3:
