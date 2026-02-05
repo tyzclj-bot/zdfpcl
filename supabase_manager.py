@@ -59,6 +59,22 @@ class SupabaseManager:
         endpoint = f"{self.url}/auth/v1/logout"
         requests.post(endpoint, headers=self._get_headers(access_token))
 
+    def get_google_auth_url(self, redirect_to, fixed_verifier=None):
+        """
+        Convenience method specifically for Google Login.
+        Wraps get_oauth_url with 'google' provider.
+        Returns ONLY the auth_url (handling verifier storage is up to the caller/wrapper, 
+        but here we assume the caller handles the verifier if they need it, 
+        or we just return the URL).
+        
+        Wait, the app expects just the URL from this method based on usage:
+        auth_url = supabase.get_google_auth_url(redirect_url, FIXED_VERIFIER)
+        
+        So we should update get_oauth_url to be more flexible or just wrap it here.
+        """
+        url, _ = self.get_oauth_url("google", redirect_to, fixed_verifier)
+        return url
+
     def get_oauth_url(self, provider, redirect_to, fixed_verifier=None):
         """
         Generates the OAuth URL for the given provider using PKCE flow.
