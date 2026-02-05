@@ -43,8 +43,19 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
+    /* Hide Streamlit Default Elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
     .main {
         background-color: #f8fafc;
+    }
+
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #f1f5f9; /* Light Blue-Grey */
+        padding-top: 2rem;
     }
     
     .stButton>button {
@@ -79,21 +90,44 @@ st.markdown("""
         box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
     }
     
-    .result-card {
-        background-color: white;
+    /* Credit Card Style */
+    .credit-card {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
         padding: 1.5rem;
         border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
     
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 9999px;
-        font-size: 0.875rem;
+    .credit-label {
+        font-size: 0.8rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .credit-amount {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+
+    .sidebar-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        color: #334155;
         font-weight: 500;
+        border-radius: 6px;
+        transition: background-color 0.2s;
     }
     
+    .sidebar-nav-item:hover {
+        background-color: #e2e8f0;
+    }
+
     h1, h2, h3 {
         color: #1e293b;
     }
@@ -552,15 +586,19 @@ def main():
     # But user wants this "Homepage" look. Let's put it at the top.
     
     if not st.session_state.user:
-        # LANDING PAGE VIEW
+        # LANDING PAGE VIEW (Hero Section)
         st.markdown("""
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <h1 style="font-size: 3rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;">
-                    AI Invoice Intelligence
+            <div style="text-align: center; margin-top: 2rem; margin-bottom: 3rem;">
+                <h1 style="font-size: 3.5rem; font-weight: 800; color: #1e293b; line-height: 1.2; margin-bottom: 1rem;">
+                    Automate Bills to <span style="color: #4f46e5;">QuickBooks</span> in Seconds
                 </h1>
-                <p style="font-size: 1.5rem; color: #475569; font-weight: 500;">
-                    Save 90% of your bookkeeping time with AI
+                <p style="font-size: 1.25rem; color: #64748b; font-weight: 400; max-width: 600px; margin: 0 auto 2rem;">
+                    Stop manual typing. Powered by DeepSeek AI with 99% accuracy.
                 </p>
+                <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem;">
+                    <span style="background-color: #dbeafe; color: #1e40af; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.875rem;">🚀 Instant Sync</span>
+                    <span style="background-color: #d1fae5; color: #065f46; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.875rem;">✨ 99% Accuracy</span>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -573,7 +611,7 @@ def main():
                 margin-bottom: 3rem;
                 border-radius: 12px;
                 overflow: hidden;
-                box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+                box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
                 border: 1px solid #e2e8f0;
             ">
                 <iframe 
@@ -593,15 +631,31 @@ def main():
             </div>
         """, unsafe_allow_html=True)
 
+        # Trust Badges (Landing Page)
         st.markdown("""
-        <div style="text-align: center; padding: 20px;">
+            <div style="display: flex; justify-content: center; gap: 3rem; margin-bottom: 4rem; flex-wrap: wrap; border-top: 1px solid #e2e8f0; padding-top: 2rem;">
+                 <div style="text-align: center;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔒</div>
+                    <div style="font-weight: 600; color: #334155;">SSL Encrypted</div>
+                 </div>
+                 <div style="text-align: center;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🗑️</div>
+                    <div style="font-weight: 600; color: #334155;">No Data Retention</div>
+                 </div>
+                 <div style="text-align: center;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">✅</div>
+                    <div style="font-weight: 600; color: #334155;">QuickBooks Compatible</div>
+                 </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="text-align: center; padding: 20px; background-color: white; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 2rem;">
             <h3>👋 Ready to get started?</h3>
             <p>Please log in or register via the sidebar to start processing invoices.</p>
             <p>New users get <b>5 free credits</b>!</p>
         </div>
         """, unsafe_allow_html=True)
-        
-        st.divider()
         
         # --- Sample Download Section ---
         st.markdown("""
@@ -654,70 +708,75 @@ def main():
             # Wrap in a container for card-like look
             with st.container(border=True):
                 st.subheader("1. Upload Invoice")
-        uploaded_file = st.file_uploader("Upload Invoice", type=["pdf", "png", "jpg", "jpeg"])
-        
-        # Trust Signals
-        st.info("🛡️ **7-Day Money Back Guarantee**  \n🔒 **Secure Payment by Lemon Squeezy**")
+                uploaded_file = st.file_uploader("Upload Invoice", type=["pdf", "png", "jpg", "jpeg"])
+                
+                # Trust Signals
+                st.markdown("""
+                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">
+                        <p style="margin-bottom: 0.25rem;">🛡️ 7-Day Money Back Guarantee</p>
+                        <p>🔒 Secure Payment by Lemon Squeezy</p>
+                    </div>
+                """, unsafe_allow_html=True)
 
-        if uploaded_file:
-                # Display preview based on file type
-                file_type = uploaded_file.type
-                if "image" in file_type:
-                    st.image(uploaded_file, caption="Uploaded Image Preview", width=400)
-                else:
-                    st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
+                if uploaded_file:
+                    # Display preview based on file type
+                    file_type = uploaded_file.type
+                    if "image" in file_type:
+                        st.image(uploaded_file, caption="Uploaded Image Preview", width=400)
+                    else:
+                        st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
 
-                if st.button("🤖 Process with AI"):
-                    # Double check credits before processing
-                    supabase = init_supabase()
-                    credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
-                    
-                    if credits <= 0:
-                        st.error("Insufficient credits!")
-                        return
+                    if st.button("🤖 Process with AI"):
+                        # Double check credits before processing
+                        supabase = init_supabase()
+                        credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
+                        
+                        if credits <= 0:
+                            st.error("Insufficient credits!")
+                            return
 
-                    extractor = get_extractor() # Get cached instance
-                    with st.spinner("🤖 AI is analyzing your document..."):
-                        try:
-                            file_bytes = uploaded_file.getvalue()
-                            
-                            if "image" in uploaded_file.type:
-                                data = extractor.extract_from_image(file_bytes)
-                            else: # It's a PDF
-                                with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                                    tmp.write(file_bytes)
-                                    tmp_path = tmp.name
+                        extractor = get_extractor() # Get cached instance
+                        with st.spinner("🤖 AI is analyzing your document..."):
+                            try:
+                                file_bytes = uploaded_file.getvalue()
                                 
-                                data = extractor.process_pdf(tmp_path)
-                                os.unlink(tmp_path)
+                                if "image" in uploaded_file.type:
+                                    data = extractor.extract_from_image(file_bytes)
+                                else: # It's a PDF
+                                    with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                                        tmp.write(file_bytes)
+                                        tmp_path = tmp.name
+                                    
+                                    data = extractor.process_pdf(tmp_path)
+                                    os.unlink(tmp_path)
 
-                            # Check return data type
-                            if isinstance(data, dict) and data.get("error"):
-                                st.error(f"AI Processing Error: {data['error']}")
-                                # Clear old data (if any)
-                                if 'invoice_data' in st.session_state:
-                                    del st.session_state['invoice_data']
-                            else:
-                                # If Pydantic object, convert to dict for storage and display
-                                if not isinstance(data, dict):
-                                    data = data.model_dump()
+                                # Check return data type
+                                if isinstance(data, dict) and data.get("error"):
+                                    st.error(f"AI Processing Error: {data['error']}")
+                                    # Clear old data (if any)
+                                    if 'invoice_data' in st.session_state:
+                                        del st.session_state['invoice_data']
+                                else:
+                                    # If Pydantic object, convert to dict for storage and display
+                                    if not isinstance(data, dict):
+                                        data = data.model_dump()
+                                    
+                                    st.session_state['invoice_data'] = data
+                                    st.session_state['processed'] = True
+                                    
+                                    # --- SUCCESS: Deduct Credit & Log History ---
+                                    try:
+                                        supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                        supabase.log_invoice(st.session_state.user.id, data, st.session_state.access_token)
+                                        st.toast("Credits deducted: -1", icon="💳")
+                                        # Update local state to reflect change immediately
+                                        st.session_state.credits -= 1
+                                    except Exception as db_err:
+                                        st.warning(f"Result processed but failed to update DB: {db_err}")
                                 
-                                st.session_state['invoice_data'] = data
-                                st.session_state['processed'] = True
-                                
-                                # --- SUCCESS: Deduct Credit & Log History ---
-                                try:
-                                    supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
-                                    supabase.log_invoice(st.session_state.user.id, data, st.session_state.access_token)
-                                    st.toast("Credits deducted: -1", icon="💳")
-                                    # Update local state to reflect change immediately
-                                    st.session_state.credits -= 1
-                                except Exception as db_err:
-                                    st.warning(f"Result processed but failed to update DB: {db_err}")
-                            
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"An error occurred during processing: {str(e)}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"An error occurred during processing: {str(e)}")
 
         with col2:
             with st.container(border=True):
@@ -731,14 +790,15 @@ def main():
                         st.subheader("AI Vision Diagnostic Report")
                         st.markdown(data["diagnostic_description"])
                         st.info("This is a diagnostic run. We are checking the connection to the vision model.")
-                        return # Stop rendering, do not display regular results below
+                        return # Stop rendering
 
                     # Key Metrics Row
                     m1, m2, m3 = st.columns(3)
                     with m1:
                         st.metric("Vendor", data.get('vendor_name'))
                     with m2:
-                        st.metric("Total Amount", f"{data.get('currency')} {data.get('total_amount')}")
+                        currency_symbol = "$" if data.get('currency', 'USD') == 'USD' else data.get('currency', '')
+                        st.metric("Total Amount", f"{currency_symbol}{data.get('total_amount')}")
                     with m3:
                         st.metric("Invoice #", data.get('invoice_number'))
 
@@ -747,34 +807,56 @@ def main():
                     
                     with tab1:
                         if data.get('items'):
-                            df = pd.DataFrame(data['items'])
-                            # Editable Dataframe
+                            # Create a display-friendly DataFrame
+                            items_list = data['items']
+                            df = pd.DataFrame(items_list)
+                            
+                            # Rename columns for professional display
+                            # Map internal keys to display keys
+                            column_config = {
+                                "description": st.column_config.TextColumn("Description", width="large"),
+                                "quantity": st.column_config.NumberColumn("Qty"),
+                                "unit_price": st.column_config.NumberColumn("Unit Price", format="$%.2f"),
+                                "total_price": st.column_config.NumberColumn("Total", format="$%.2f"),
+                                "category": st.column_config.SelectboxColumn("Category", options=["Office Supplies", "Meals", "Travel", "Software", "Utilities", "Uncategorized Expense"], required=True)
+                            }
+                            
+                            # Ensure we only show relevant columns
+                            cols_order = ["description", "quantity", "unit_price", "total_price", "category"]
+                            # Filter only existing columns
+                            cols_order = [c for c in cols_order if c in df.columns]
+                            
                             edited_df = st.data_editor(
-                                df,
+                                df[cols_order],
+                                column_config=column_config,
                                 num_rows="dynamic",
                                 use_container_width=True,
                                 key="invoice_items_editor"
                             )
                             
-                            # Update session state with edited data
-                            # Note: st.data_editor returns the edited dataframe immediately
-                            # We need to reflect these changes in the data object used for export
-                            
-                            # Convert back to list of dicts
-                            updated_items = edited_df.to_dict('records')
-                            
-                            # Update the main data object in session state
-                            # This ensures that when the user clicks 'Download', they get the edited version
-                            st.session_state['invoice_data']['items'] = updated_items
-                            
-                            # Optional: Recalculate total if needed, but for now we trust the user's edits
-                            # or we could sum up the total_price column
+                            # --- Real-time Validation ---
                             try:
-                                new_total = edited_df['total_price'].sum()
-                                st.session_state['invoice_data']['total_amount'] = new_total
-                            except:
-                                pass
+                                # Calculate sum of line items
+                                line_total = edited_df['total_price'].sum()
+                                invoice_total = float(data.get('total_amount', 0))
                                 
+                                # Check for mismatch (allow small float error)
+                                if abs(line_total - invoice_total) > 0.01:
+                                    st.warning(f"⚠️ **Total mismatch detected.** Line items sum (${line_total:.2f}) does not match Invoice Total (${invoice_total:.2f}). Please double-check.")
+                                else:
+                                    st.caption(f"✅ Line items match invoice total.")
+                                
+                                # Update session state with edited data
+                                # We need to map back to original keys if we renamed them? 
+                                # st.data_editor returns dataframe with same column names as input df if we just used column_config to change label.
+                                # Yes, column_config changes the *label*, not the underlying key. So edited_df still has 'description', 'total_price' etc.
+                                
+                                updated_items = edited_df.to_dict('records')
+                                st.session_state['invoice_data']['items'] = updated_items
+                                
+                            except Exception as val_err:
+                                st.error(f"Validation Error: {val_err}")
+
                         else:
                             st.write("No line items detected.")
 
@@ -790,7 +872,7 @@ def main():
                     items_data = data.get('items', [])
                     df_export = pd.DataFrame(items_data) if items_data else pd.DataFrame()
 
-                    c1, c2, c3, c4 = st.columns(4)
+                    c1, c2, c3 = st.columns(3)
                     with c1:
                         if st.button("🚀 Sync to QuickBooks"):
                             with st.spinner("Connecting to QuickBooks Online..."):
@@ -802,10 +884,11 @@ def main():
                     with c2:
                         csv = generate_quickbooks_csv(data)
                         st.download_button(
-                            label="📄 Download CSV",
+                            label="📥 Export to QuickBooks CSV",
                             data=csv,
                             file_name=f"invoice_{data.get('invoice_number', 'export')}.csv",
-                            mime="text/csv"
+                            mime="text/csv",
+                            type="primary"
                         )
 
                     with c3:
@@ -819,18 +902,8 @@ def main():
                             file_name=f"invoice_{data.get('invoice_number', 'export')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-
-                    with c4:
-                        json_str = json.dumps(data, indent=4, ensure_ascii=False)
-                        st.download_button(
-                            label="📥 Download JSON",
-                            data=json_str,
-                            file_name=f"invoice_{data.get('invoice_number', 'export')}.json",
-                            mime="application/json"
-                        )
                 else:
                     st.info("Upload and process an invoice to see results here.")
-                    # Placeholder image or illustration could go here
 
         # --- Processing History ---
         st.divider()
@@ -870,54 +943,6 @@ def main():
                         st.info("No processing history found.")
                 else:
                     st.warning("Please redeploy the app to update the Supabase Manager (missing get_invoice_history).")
-
-    # --- Footer & Trust Section ---
-    st.markdown("---")
-    
-    # Trust Badges
-    st.markdown("""
-        <div style="display: flex; justify-content: center; align-items: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: #475569;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                <span style="font-weight: 600; font-size: 0.9rem;">256-bit SSL Encrypted</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: #475569;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                <span style="font-weight: 600; font-size: 0.9rem;">Bank-Level Security</span>
-            </div>
-            <div style="opacity: 0.8;">
-                 <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Secured by Stripe" height="25">
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Footer Links (Using columns for layout)
-    f_col1, f_col2, f_col3 = st.columns([1, 2, 1])
-    
-    with f_col2:
-        st.markdown("""
-            <div style="text-align: center; color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                &copy; 2025 AI Invoice Intelligence. All rights reserved.
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Legal Links using Streamlit buttons styled as text
-        # We use a container to group them
-        with st.container():
-            # Centering buttons in Streamlit is tricky, we use columns inside the center column
-            l1, l2, l3 = st.columns([1, 1, 1])
-            with l1:
-                if st.button("Privacy Policy", key="footer_privacy", use_container_width=True):
-                    st.session_state.show_legal = "privacy"
-                    st.rerun()
-            with l2:
-                if st.button("Terms of Service", key="footer_terms", use_container_width=True):
-                    st.session_state.show_legal = "terms"
-                    st.rerun()
-            with l3:
-                 st.link_button("Support", "mailto:tyzclj@gmail.com", use_container_width=True)
-
-    st.markdown("<br><br>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
