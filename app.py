@@ -361,7 +361,7 @@ def main():
             <div>
                 <a href="mailto:tyzclj@gmail.com" class="support-link">Support</a>
                 <span style="margin: 0 0.5rem; color: #cbd5e1;">|</span>
-                <a href="#" class="support-link">Docs (v1.1)</a>
+                <a href="#" class="support-link">Docs (v1.2)</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -570,7 +570,28 @@ def main():
                     # Using FIXED_VERIFIER for stability
                     redirect_url = "https://quickbills-ai.streamlit.app" 
                     auth_url = supabase.get_google_auth_url(redirect_url, FIXED_VERIFIER)
-                    st.link_button("Continue with Google", auth_url, type="primary", use_container_width=True)
+                    
+                    # Use HTML button to force target="_self" (prevent opening new tab)
+                    st.markdown(f"""
+                        <a href="{auth_url}" target="_self" style="
+                            display: block;
+                            width: 100%;
+                            background-color: #FF4B4B;
+                            color: white;
+                            text-align: center;
+                            padding: 0.5rem 0.75rem;
+                            border-radius: 0.5rem;
+                            text-decoration: none;
+                            font-weight: 600;
+                            border: 1px solid #FF4B4B;
+                            line-height: 1.6;
+                            font-family: 'Source Sans Pro', sans-serif;
+                            margin-top: 0px;
+                        ">
+                            Continue with Google
+                        </a>
+                    """, unsafe_allow_html=True)
+                    # st.link_button("Continue with Google", auth_url, type="primary", use_container_width=True)
                 except Exception as e:
                     st.error(f"Auth Error: {e}")
                 
