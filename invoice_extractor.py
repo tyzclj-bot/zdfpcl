@@ -142,12 +142,31 @@ class AIInvoiceExtractor:
             if img is None:
                 return {"error": "Unable to decode image file"}
 
-            # 2. Initialize EasyOCR (Supports Chinese and English)
+            # 2. Pre-processing for Receipt OCR (Contrast + Binarization)
+            # Convert to grayscale
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Contrast Enhancement (CLAHE - Contrast Limited Adaptive Histogram Equalization)
+            # This helps with local contrast (making text pop against background)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            enhanced = clahe.apply(gray)
+            
+            # Binarization (Adaptive Thresholding)
+            # Gaussian thresholding handles shadows/uneven lighting better than global threshold
+            # 11 is block size, 2 is C constant. These are standard for documents.
+            binary = cv2.adaptiveThreshold(enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                         cv2.THRESH_BINARY, 11, 2)
+            
+            # Denoise (Optional, small median blur to remove salt-and-pepper noise)
+            # processed_img = cv2.medianBlur(binary, 3) 
+            processed_img = binary # Keep it sharp for now
+
+            # 3. Initialize EasyOCR (Supports Chinese and English)
             # Note: First run will download model, may take some time
             reader = easyocr.Reader(['ch_sim', 'en'], gpu=False) 
             
-            # 3. Extract text
-            result = reader.readtext(img, detail=0)
+            # 4. Extract text from PROCESSED image
+            result = reader.readtext(processed_img, detail=0)
             text = "\n".join(result)
             
             logger.info(f"OCR extracted {len(text)} characters.")
