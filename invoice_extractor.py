@@ -26,6 +26,7 @@ class InvoiceData(BaseModel):
     due_date: Optional[str] = Field(None, description="Due date (YYYY-MM-DD)")
     items: List[InvoiceItem] = Field(default_factory=list, description="List of invoice items")
     total_amount: float = Field(..., description="Total invoice amount")
+    tax_amount: Optional[float] = Field(0.0, description="Total tax amount")
     currency: str = Field("USD", description="Currency code")
     warning: Optional[str] = Field(None, description="Audit warning for suspected OCR or logic errors")
 
@@ -57,10 +58,10 @@ class AIInvoiceExtractor:
         You are a professional financial audit assistant. Please extract key information from the following invoice text and return it in the required JSON format.
         
         **CRITICAL EXTRACTION RULES (MUST FOLLOW):**
-        1. **Exclude Keywords:** COMPLETELY IGNORE lines containing 'SUBTOTAL', 'TOTAL', 'CASH', 'CHANGE', 'BALANCE', 'TAX' when parsing line items. These are NOT product items.
+        1. **Exclude Keywords:** COMPLETELY IGNORE lines containing 'SUBTOTAL', 'TOTAL', 'CASH', 'CHANGE', 'BALANCE' when parsing line items. 'TAX' lines should be extracted to 'tax_amount', not line items.
         2. **Amount Extraction:** For each line item, the 'total_price' is usually the number on the FAR RIGHT of the line.
         3. **Quantity Logic:** Default 'quantity' to 1 unless you explicitly see an '@' symbol (e.g., "3 @ 1.50"). Do NOT guess quantity based on price.
-        4. **Strict Validation:** Before outputting JSON, you MUST verify: Sum(items.total_price) + Tax ~= Total Amount. If they don't match, re-read the line items to ensure you didn't include a 'Subtotal' line as an item.
+        4. **Strict Validation:** Before outputting JSON, you MUST verify: Sum(items.total_price) + tax_amount ~= Total Amount.
         5. **Date Format:** Convert all dates to 'MM/DD/YYYY' format.
         
         **EXTREME AUDIT LOGIC (FOR WALMART & RETAIL RECEIPTS):**

@@ -229,8 +229,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def get_extractor_v5():
-    """Use Streamlit cache to create and reuse AI extractor instance (Version 5 - Upscale + Soft Preprocessing)"""
+def get_extractor_v6():
+    """Use Streamlit cache to create and reuse AI extractor instance (Version 6 - Tax Validation)"""
     return AIInvoiceExtractor()
 
 def init_supabase():
@@ -918,7 +918,7 @@ def main():
                             st.error("Insufficient credits!")
                             return
 
-                        extractor = get_extractor_v5() # Get cached instance (v5)
+                        extractor = get_extractor_v6() # Get cached instance (v6)
                         
                         # --- Multi-step "Ritual" Loading ---
                         with st.status("Processing Invoice...", expanded=True) as status:
@@ -1000,16 +1000,18 @@ def main():
 
                     # Warning Display (New)
                     if data.get("warning"):
-                        st.warning(f"⚠️ **Audit Warning:** {data.get('warning')}")
+                        st.warning(f"⚠️ **Smart Audit Report:** {data.get('warning')}")
 
                     # Key Metrics Row
-                    m1, m2, m3 = st.columns(3)
+                    m1, m2, m3, m4 = st.columns(4)
                     with m1:
                         st.metric("Vendor", data.get('vendor_name'))
                     with m2:
                         currency_symbol = "$" if data.get('currency', 'USD') == 'USD' else data.get('currency', '')
                         st.metric("Total Amount", f"{currency_symbol}{data.get('total_amount')}")
                     with m3:
+                        st.metric("Tax", f"{currency_symbol}{data.get('tax_amount', 0)}")
+                    with m4:
                         st.metric("Invoice #", data.get('invoice_number'))
 
                     # Details Tab
@@ -1049,12 +1051,15 @@ def main():
                                 # Calculate sum of line items
                                 line_total = edited_df['total_price'].sum()
                                 invoice_total = float(data.get('total_amount', 0))
+                                tax_amount = float(data.get('tax_amount', 0))
                                 
                                 # Check for mismatch (allow small float error)
-                                if abs(line_total - invoice_total) > 0.01:
-                                    st.warning(f"⚠️ **Total mismatch detected.** Line items sum (${line_total:.2f}) does not match Invoice Total (${invoice_total:.2f}). Please double-check.")
+                                calculated_total = line_total + tax_amount
+                                
+                                if abs(calculated_total - invoice_total) < 0.02:
+                                    st.success(f"✅ **Logic Perfect:** Items(${line_total:.2f}) + Tax(${tax_amount:.2f}) = Total(${invoice_total:.2f})")
                                 else:
-                                    st.caption(f"✅ Line items match invoice total.")
+                                    st.warning(f"⚠️ **Total mismatch detected.** Items(${line_total:.2f}) + Tax(${tax_amount:.2f}) = ${calculated_total:.2f}, but Invoice Total is ${invoice_total:.2f}.")
                                 
                                 # Update session state with edited data
                                 # We need to map back to original keys if we renamed them? 
