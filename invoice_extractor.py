@@ -108,7 +108,10 @@ class AIInvoiceExtractor:
             raise ValueError("PDF text extraction resulted in empty content.")
         
         structured_data = self.parse_with_ai(raw_text)
-        return structured_data.model_dump()
+        # Return both structured data and raw text for debugging
+        result = structured_data.model_dump()
+        result["_raw_text"] = raw_text
+        return result
 
     def extract_from_image(self, image_bytes: bytes) -> dict:
         """
@@ -146,7 +149,12 @@ class AIInvoiceExtractor:
                 return {"error": "OCR failed to identify any text from the image."}
 
             # 4. Send to DeepSeek for structuring
-            return self.parse_with_ai(text)
+            structured_data = self.parse_with_ai(text)
+            
+            # Return both structured data and raw text for debugging
+            result_dict = structured_data.model_dump()
+            result_dict["_raw_text"] = text
+            return result_dict
 
         except Exception as e:
             logger.error(f"OCR processing failed: {e}")

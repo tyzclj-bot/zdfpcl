@@ -993,7 +993,7 @@ def main():
                         st.metric("Invoice #", data.get('invoice_number'))
 
                     # Details Tab
-                    tab1, tab2 = st.tabs(["Line Items", "Raw JSON"])
+                    tab1, tab2, tab3 = st.tabs(["Line Items", "Raw JSON", "Debug OCR"])
                     
                     with tab1:
                         if data.get('items'):
@@ -1052,6 +1052,12 @@ def main():
 
                     with tab2:
                         st.json(data)
+                    
+                    with tab3:
+                        st.subheader("Raw Extracted Text (OCR Output)")
+                        st.caption("This is the raw text extracted from your document before AI processing.")
+                        raw_text = data.get("_raw_text", "No raw text available.")
+                        st.text_area("Raw Text Content", value=raw_text, height=400, disabled=True)
 
                     st.divider()
                     
