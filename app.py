@@ -386,6 +386,7 @@ def show_contact_page():
 
 # --- App Logic ---
 FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
+ADMIN_EMAIL = "tyzclj@gmail.com"
 
 def main():
     # --- Navigation Logic ---
@@ -564,18 +565,21 @@ def main():
                 # Credits Display with Top Up
                 c1, c2 = st.columns([2, 1])
                 with c1:
-                    st.metric("Credits", st.session_state.credits)
+                    if st.session_state.user.email == ADMIN_EMAIL:
+                        st.metric("Credits", "Unlimited")
+                    else:
+                        st.metric("Credits", st.session_state.credits)
                 with c2:
-                    if plan_status == 'pro':
+                    if plan_status == 'pro' or st.session_state.user.email == ADMIN_EMAIL:
                          st.markdown('<span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">PRO</span>', unsafe_allow_html=True)
                     else:
                          st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
 
-                if st.session_state.credits <= 0:
+                if st.session_state.credits <= 0 and st.session_state.user.email != ADMIN_EMAIL:
                     st.error("Please Top Up")
                 
                 # Upgrade/Top Up Button
-                if plan_status != 'pro':
+                if plan_status != 'pro' and st.session_state.user.email != ADMIN_EMAIL:
                     checkout_url = "https://www.paypal.com/invoice/p/#FNC8963Z27RBSCZ5"
                     st.link_button("💎 Top Up Credits", checkout_url, type="primary", use_container_width=True)
                     st.markdown("""
@@ -612,7 +616,7 @@ def main():
 
                 # --- ADMIN DASHBOARD (Sidebar) ---
                 # Only visible to tyzclj@gmail.com
-                if st.session_state.user.email == "tyzclj@gmail.com":
+                if st.session_state.user.email == ADMIN_EMAIL:
                     st.markdown("---")
                     st.markdown("### 👑 Admin Stats")
                     
@@ -904,7 +908,7 @@ def main():
                         supabase = init_supabase()
                         credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
                         
-                        if credits <= 0:
+                        if credits <= 0 and st.session_state.user.email != ADMIN_EMAIL:
                             st.error("Insufficient credits!")
                             return
 
@@ -954,11 +958,15 @@ def main():
                                     
                                     # --- SUCCESS: Deduct Credit & Log History ---
                                     try:
-                                        supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                        # Only deduct if not admin
+                                        if st.session_state.user.email != ADMIN_EMAIL:
+                                            supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                            st.toast("Credits deducted: -1", icon="💳")
+                                            st.session_state.credits -= 1
+                                        else:
+                                            st.toast("Admin Processed (No Credit Deduction)", icon="🛡️")
+
                                         supabase.log_invoice(st.session_state.user.id, data, st.session_state.access_token)
-                                        st.toast("Credits deducted: -1", icon="💳")
-                                        # Update local state to reflect change immediately
-                                        st.session_state.credits -= 1
                                     except Exception as db_err:
                                         st.warning(f"Result processed but failed to update DB: {db_err}")
                                 
