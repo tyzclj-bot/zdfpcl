@@ -651,8 +651,26 @@ def main():
         # --- Support Section ---
         st.markdown("---")
         st.markdown("### 💬 Support")
-        st.markdown("Need help? Contact us at:")
-        st.code("tyzclj@gmail.com", language=None)
+        st.markdown("""
+            <div style="background-color: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+                <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #64748b;">Need help or custom integration?</p>
+                <a href="mailto:tyzclj@gmail.com" style="
+                    display: inline-block;
+                    width: 100%;
+                    background-color: #f8fafc;
+                    color: #334155;
+                    border: 1px solid #cbd5e1;
+                    padding: 0.5rem;
+                    border-radius: 6px;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    transition: all 0.2s;
+                ">
+                    ✉️ Contact Support
+                </a>
+            </div>
+        """, unsafe_allow_html=True)
 
         # st.info("System Status: Online")
         # st.caption("v1.2.0 (Stable Auth Fix)")
@@ -790,7 +808,7 @@ def main():
             st.caption("Absolutely. Our AI engine outperforms traditional OCR by understanding context, allowing it to accurately parse complex and non-standard layouts.")
         with faq3:
             st.markdown("**Can I request a custom CSV format?**")
-            st.caption("Yes. Please contact us for custom integrations. We support a wide range of accounting software and formats.")
+            st.caption("Yes. Please [contact us](mailto:tyzclj@gmail.com) for custom integrations. We support a wide range of accounting software and formats.")
         
     else:
         # DASHBOARD VIEW (Logged In)
@@ -1091,6 +1109,18 @@ def main():
                 </div>
             </div>
         """, unsafe_allow_html=True)
+
+    # --- Global Site Footer ---
+    st.markdown("""
+        <div style="text-align: center; margin-top: 4rem; margin-bottom: 2rem; color: #94a3b8; font-size: 0.85rem; border-top: 1px solid #f1f5f9; padding-top: 2rem;">
+            <p style="margin-bottom: 0.5rem;">&copy; 2025 QuickBills AI. All rights reserved.</p>
+            <div style="display: flex; justify-content: center; gap: 1.5rem;">
+                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;">Privacy Policy</a>
+                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;">Terms of Service</a>
+                 <a href="mailto:tyzclj@gmail.com" style="color: #64748b; text-decoration: none; transition: color 0.2s;">Contact Us</a>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
