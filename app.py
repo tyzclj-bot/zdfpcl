@@ -359,9 +359,9 @@ def main():
                 </h2>
             </div>
             <div>
-                <a href="mailto:tyzclj@gmail.com" class="support-link">Support</a>
+                <a href="mailto:tyzclj@gmail.com" class="support-link" target="_self">Support</a>
                 <span style="margin: 0 0.5rem; color: #cbd5e1;">|</span>
-                <a href="#" class="support-link">Docs</a>
+                <a href="#" class="support-link" target="_self">Docs</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -666,7 +666,7 @@ def main():
                     font-weight: 600;
                     font-size: 0.9rem;
                     transition: all 0.2s;
-                ">
+                " target="_self">
                     ✉️ Contact Support
                 </a>
             </div>
@@ -808,7 +808,7 @@ def main():
             st.caption("Absolutely. Our AI engine outperforms traditional OCR by understanding context, allowing it to accurately parse complex and non-standard layouts.")
         with faq3:
             st.markdown("**Can I request a custom CSV format?**")
-            st.caption("Yes. Please [contact us](mailto:tyzclj@gmail.com) for custom integrations. We support a wide range of accounting software and formats.")
+            st.markdown("Yes. Please <a href='mailto:tyzclj@gmail.com' target='_self'>contact us</a> for custom integrations. We support a wide range of accounting software and formats.", unsafe_allow_html=True)
         
     else:
         # DASHBOARD VIEW (Logged In)
@@ -1115,9 +1115,9 @@ def main():
         <div style="text-align: center; margin-top: 4rem; margin-bottom: 2rem; color: #94a3b8; font-size: 0.85rem; border-top: 1px solid #f1f5f9; padding-top: 2rem;">
             <p style="margin-bottom: 0.5rem;">&copy; 2025 QuickBills AI. All rights reserved.</p>
             <div style="display: flex; justify-content: center; gap: 1.5rem;">
-                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;">Privacy Policy</a>
-                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;">Terms of Service</a>
-                 <a href="mailto:tyzclj@gmail.com" style="color: #64748b; text-decoration: none; transition: color 0.2s;">Contact Us</a>
+                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Privacy Policy</a>
+                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Terms of Service</a>
+                 <a href="mailto:tyzclj@gmail.com" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Contact Us</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
