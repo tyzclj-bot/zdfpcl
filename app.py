@@ -740,6 +740,10 @@ def main():
         # st.info("System Status: Online")
         # st.caption("v1.2.0 (Stable Auth Fix)")
 
+        # --- Developer Mode Toggle ---
+        st.sidebar.divider()
+        dev_mode = st.sidebar.checkbox("🛠️ Developer Mode", value=False, help="Enable advanced debugging tabs (Raw JSON, OCR Output)")
+
     # --- Main App Display ---
     
     # Handle Legal Page Display
@@ -1015,7 +1019,12 @@ def main():
                         st.metric("Invoice #", data.get('invoice_number'))
 
                     # Details Tab
-                    tab1, tab2, tab3 = st.tabs(["Line Items", "Raw JSON", "Debug OCR"])
+                    if dev_mode:
+                        tab1, tab2, tab3 = st.tabs(["Line Items", "Raw JSON", "Debug OCR"])
+                    else:
+                        # Only show Line Items tab content, but we still need a container
+                        tab1, = st.tabs(["Line Items"])
+                        tab2, tab3 = None, None # Disable other tabs
                     
                     with tab1:
                         if data.get('items'):
@@ -1075,36 +1084,37 @@ def main():
                         else:
                             st.write("No line items detected.")
 
-                    with tab2:
-                        st.json(data)
-                    
-                    with tab3:
-                        st.subheader("Raw Extracted Text (OCR Output)")
-                        st.caption("This is the raw text extracted from your document before AI processing.")
+                    if dev_mode:
+                        with tab2:
+                            st.json(data)
                         
-                        raw_display = "Waiting for upload..."
-                        source = "Init"
-                        
-                        if "raw_ocr_output" in st.session_state:
-                            raw_display = st.session_state.raw_ocr_output
-                            source = "Session State"
-                        elif isinstance(data, dict) and data.get("_raw_text"):
-                            raw_display = data.get("_raw_text")
-                            source = "Data Object"
-                        
-                        st.text_area("Raw Text Content", value=raw_display, height=400, disabled=False)
-                        
-                        # Debugging Info (Hidden by default)
-                        with st.expander("🛠️ Developer Debug Info"):
-                            st.write(f"**Data Source:** {source}")
-                            st.write("**Session Keys:**", list(st.session_state.keys()))
-                            if isinstance(data, dict):
-                                st.write("**Data Keys:**", list(data.keys()))
-                                st.write("**Has _raw_text:**", "_raw_text" in data)
-                                if "_raw_text" in data:
-                                    st.write("**_raw_text length:**", len(data["_raw_text"]))
-                            else:
-                                st.write("**Data Type:**", type(data))
+                        with tab3:
+                            st.subheader("Raw Extracted Text (OCR Output)")
+                            st.caption("This is the raw text extracted from your document before AI processing.")
+                            
+                            raw_display = "Waiting for upload..."
+                            source = "Init"
+                            
+                            if "raw_ocr_output" in st.session_state:
+                                raw_display = st.session_state.raw_ocr_output
+                                source = "Session State"
+                            elif isinstance(data, dict) and data.get("_raw_text"):
+                                raw_display = data.get("_raw_text")
+                                source = "Data Object"
+                            
+                            st.text_area("Raw Text Content", value=raw_display, height=400, disabled=False)
+                            
+                            # Debugging Info (Hidden by default)
+                            with st.expander("🛠️ Developer Debug Info"):
+                                st.write(f"**Data Source:** {source}")
+                                st.write("**Session Keys:**", list(st.session_state.keys()))
+                                if isinstance(data, dict):
+                                    st.write("**Data Keys:**", list(data.keys()))
+                                    st.write("**Has _raw_text:**", "_raw_text" in data)
+                                    if "_raw_text" in data:
+                                        st.write("**_raw_text length:**", len(data["_raw_text"]))
+                                else:
+                                    st.write("**Data Type:**", type(data))
 
                     st.divider()
                     
