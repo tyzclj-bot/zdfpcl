@@ -229,8 +229,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def get_extractor_v4():
-    """Use Streamlit cache to create and reuse AI extractor instance (Version 4 - Preprocessing)"""
+def get_extractor_v5():
+    """Use Streamlit cache to create and reuse AI extractor instance (Version 5 - Upscale + Soft Preprocessing)"""
     return AIInvoiceExtractor()
 
 def init_supabase():
@@ -918,7 +918,7 @@ def main():
                             st.error("Insufficient credits!")
                             return
 
-                        extractor = get_extractor_v4() # Get cached instance (v4)
+                        extractor = get_extractor_v5() # Get cached instance (v5)
                         
                         # --- Multi-step "Ritual" Loading ---
                         with st.status("Processing Invoice...", expanded=True) as status:

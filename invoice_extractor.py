@@ -142,25 +142,24 @@ class AIInvoiceExtractor:
             if img is None:
                 return {"error": "Unable to decode image file"}
 
-            # 2. Pre-processing for Receipt OCR (Contrast + Binarization)
+            # 2. Pre-processing for Receipt OCR (Upscaling + Contrast)
+            # Strategy: Upscale image to make decimal points larger and clearer.
+            # Binarization is removed as it was causing data loss (garbled text).
+            
+            # Upscale (2x or 3x) to separate dots from numbers
+            # Use Cubic interpolation for better text quality
+            scale_factor = 2.0
+            if img.shape[1] < 2000: # Only upscale if not already huge
+                img = cv2.resize(img, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
+
             # Convert to grayscale
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             
-            # Contrast Enhancement (CLAHE - Contrast Limited Adaptive Histogram Equalization)
-            # This helps with local contrast (making text pop against background)
+            # Contrast Enhancement (CLAHE)
+            # Makes text darker and background lighter without the harshness of thresholding
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            enhanced = clahe.apply(gray)
+            processed_img = clahe.apply(gray)
             
-            # Binarization (Adaptive Thresholding)
-            # Gaussian thresholding handles shadows/uneven lighting better than global threshold
-            # 11 is block size, 2 is C constant. These are standard for documents.
-            binary = cv2.adaptiveThreshold(enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                         cv2.THRESH_BINARY, 11, 2)
-            
-            # Denoise (Optional, small median blur to remove salt-and-pepper noise)
-            # processed_img = cv2.medianBlur(binary, 3) 
-            processed_img = binary # Keep it sharp for now
-
             # 3. Initialize EasyOCR (Supports Chinese and English)
             # Note: First run will download model, may take some time
             reader = easyocr.Reader(['ch_sim', 'en'], gpu=False) 
