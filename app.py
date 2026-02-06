@@ -13,6 +13,7 @@ load_dotenv()
 from invoice_extractor import AIInvoiceExtractor
 from quickbooks_adapter import QuickBooksAdapter
 from supabase_manager import SupabaseManager
+from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
 
 # --- Page Configuration ---
@@ -342,10 +343,64 @@ def get_sample_csv():
     df = pd.DataFrame(data)
     return df.to_csv(index=False).encode('utf-8-sig')
 
+# --- Navigation Helpers ---
+def go_home():
+    st.query_params.clear()
+    st.rerun()
+
+def show_legal_page(title, content):
+    st.markdown(f"# {title}")
+    st.markdown(content)
+    if st.button("← Back to App"):
+        go_home()
+
+def show_contact_page():
+    st.markdown("# Contact Support")
+    st.markdown("""
+    We are here to help! If you have any questions, issues, or feature requests, please reach out to us.
+    
+    ### Email Support
+    **Email:** `tyzclj@gmail.com`
+    
+    **Team Location:** Hong Kong / Taiwan (Global Support)
+    
+    **Response Time:** We usually respond within 24 hours.
+    """)
+    
+    st.markdown("""
+    <a href="mailto:tyzclj@gmail.com" style="
+        display: inline-block;
+        background-color: #4f46e5;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        margin-top: 1rem;
+    " target="_self">Send Email Now</a>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    if st.button("← Back to App"):
+        go_home()
+
 # --- App Logic ---
 FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
 
 def main():
+    # --- Navigation Logic ---
+    if "nav" in st.query_params:
+        nav_target = st.query_params["nav"]
+        if nav_target == "privacy":
+            show_legal_page("Privacy Policy", PRIVACY_POLICY)
+            return
+        elif nav_target == "terms":
+            show_legal_page("Terms of Service", TERMS_OF_SERVICE)
+            return
+        elif nav_target == "contact":
+            show_contact_page()
+            return
+
     # --- Custom Header (SaaS Look) ---
     st.markdown("""
         <div class="custom-header">
@@ -359,7 +414,7 @@ def main():
                 </h2>
             </div>
             <div>
-                <a href="mailto:tyzclj@gmail.com" class="support-link" target="_self">Support</a>
+                <a href="?nav=contact" class="support-link" target="_self">Support</a>
                 <span style="margin: 0 0.5rem; color: #cbd5e1;">|</span>
                 <a href="#" class="support-link" target="_self">Docs</a>
             </div>
@@ -654,7 +709,7 @@ def main():
         st.markdown("""
             <div style="background-color: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
                 <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #64748b;">Need help or custom integration?</p>
-                <a href="mailto:tyzclj@gmail.com" style="
+                <a href="?nav=contact" style="
                     display: inline-block;
                     width: 100%;
                     background-color: #f8fafc;
@@ -808,7 +863,7 @@ def main():
             st.caption("Absolutely. Our AI engine outperforms traditional OCR by understanding context, allowing it to accurately parse complex and non-standard layouts.")
         with faq3:
             st.markdown("**Can I request a custom CSV format?**")
-            st.markdown("Yes. Please <a href='mailto:tyzclj@gmail.com' target='_self'>contact us</a> for custom integrations. We support a wide range of accounting software and formats.", unsafe_allow_html=True)
+            st.markdown("Yes. Please <a href='?nav=contact' target='_self'>contact us</a> for custom integrations. We support a wide range of accounting software and formats.", unsafe_allow_html=True)
         
     else:
         # DASHBOARD VIEW (Logged In)
@@ -1115,9 +1170,9 @@ def main():
         <div style="text-align: center; margin-top: 4rem; margin-bottom: 2rem; color: #94a3b8; font-size: 0.85rem; border-top: 1px solid #f1f5f9; padding-top: 2rem;">
             <p style="margin-bottom: 0.5rem;">&copy; 2025 QuickBills AI. All rights reserved.</p>
             <div style="display: flex; justify-content: center; gap: 1.5rem;">
-                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Privacy Policy</a>
-                 <a href="#" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Terms of Service</a>
-                 <a href="mailto:tyzclj@gmail.com" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Contact Us</a>
+                 <a href="?nav=privacy" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Privacy Policy</a>
+                 <a href="?nav=terms" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Terms of Service</a>
+                 <a href="?nav=contact" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Contact Us</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
