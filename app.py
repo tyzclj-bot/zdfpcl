@@ -954,10 +954,16 @@ def main():
                                     # Clear old data (if any)
                                     if 'invoice_data' in st.session_state:
                                         del st.session_state['invoice_data']
+                                    if 'raw_ocr_output' in st.session_state:
+                                        del st.session_state['raw_ocr_output']
                                 else:
                                     # If Pydantic object, convert to dict for storage and display
                                     if not isinstance(data, dict):
                                         data = data.model_dump()
+                                    
+                                    # Store raw text in session state as requested
+                                    if "_raw_text" in data:
+                                        st.session_state.raw_ocr_output = data["_raw_text"]
                                     
                                     st.session_state['invoice_data'] = data
                                     st.session_state['processed'] = True
@@ -1066,8 +1072,14 @@ def main():
                     with tab3:
                         st.subheader("Raw Extracted Text (OCR Output)")
                         st.caption("This is the raw text extracted from your document before AI processing.")
-                        raw_text = data.get("_raw_text", "No raw text available.")
-                        st.text_area("Raw Text Content", value=raw_text, height=400, disabled=True)
+                        
+                        raw_display = "Waiting for upload..."
+                        if "raw_ocr_output" in st.session_state:
+                            raw_display = st.session_state.raw_ocr_output
+                        elif data.get("_raw_text"):
+                            raw_display = data.get("_raw_text")
+                            
+                        st.text_area("Raw Text Content", value=raw_display, height=400, disabled=True)
 
                     st.divider()
                     
