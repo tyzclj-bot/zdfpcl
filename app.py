@@ -233,6 +233,47 @@ def get_extractor_v6():
     """Use Streamlit cache to create and reuse AI extractor instance (Version 6 - Tax Validation)"""
     return AIInvoiceExtractor()
 
+# --- Helper: Waitlist Modal (Fake Door Test) ---
+if hasattr(st, "dialog"):
+    dialog_decorator = st.dialog
+elif hasattr(st, "experimental_dialog"):
+    dialog_decorator = st.experimental_dialog
+else:
+    dialog_decorator = None
+
+if dialog_decorator:
+    @dialog_decorator("🚀 Private Beta Access")
+    def show_waitlist_modal():
+        st.markdown("""
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h3 style="color: #1e293b; margin-top: 0;">Direct QuickBooks Sync</h3>
+                <p style="color: #64748b; font-size: 16px;">
+                    We are currently in <b>private beta</b> for direct API integration. <br>
+                    Join the waitlist to get early access and <span style="color: #4f46e5; font-weight: 600;">50 bonus credits</span> when we launch.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Pre-fill email
+        default_email = st.session_state.user.email if 'user' in st.session_state and st.session_state.user else ""
+        email = st.text_input("Email for Early Access", value=default_email, placeholder="name@company.com")
+        
+        if st.button("✨ Join the Waitlist", type="primary", use_container_width=True):
+            if email:
+                # Log interest (Fake Door Metric)
+                # In a real app, we'd do: supabase.table('waitlist').insert({'email': email})
+                time.sleep(0.5)
+                st.success("You're on the list! We'll notify you soon.")
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error("Please enter a valid email address.")
+else:
+    # Fallback for older Streamlit versions
+    def show_waitlist_modal():
+        with st.sidebar:
+            st.info("We are currently in private beta for direct sync. Please contact support to join.")
+
 def init_supabase():
     """Initialize Supabase Client from Env or Session State"""
     # Check if keys are in env
@@ -1128,11 +1169,13 @@ def main():
                     c1, c2, c3 = st.columns(3)
                     with c1:
                         if st.button("🚀 Sync to QuickBooks"):
-                            with st.spinner("Connecting to QuickBooks Online..."):
-                                qb = QuickBooksAdapter()
-                                if qb.sync_invoice(data):
-                                    st.toast("Successfully synced to QuickBooks!", icon="✅")
-                                    st.success("Synchronized with ERP system.")
+                            show_waitlist_modal()
+                            # Fake Door Test: Replaced actual sync with waitlist modal
+                            # with st.spinner("Connecting to QuickBooks Online..."):
+                            #     qb = QuickBooksAdapter()
+                            #     if qb.sync_invoice(data):
+                            #         st.toast("Successfully synced to QuickBooks!", icon="✅")
+                            #         st.success("Synchronized with ERP system.")
                     
                     with c2:
                         # 2. Export Button
