@@ -754,6 +754,26 @@ def main():
                     st.session_state.show_legal = "terms"
                     st.rerun()
 
+        # --- Roadmap Section (Growth Signal) ---
+        st.markdown("---")
+        st.subheader("🚀 Coming Soon")
+        st.markdown("""
+            <div style="background-color: #f0f9ff; padding: 1rem; border-radius: 8px; border: 1px solid #bae6fd;">
+                <div style="margin-bottom: 0.75rem;">
+                    <span style="font-weight: 600; color: #0369a1;">📧 Email-to-Bill</span><br>
+                    <span style="font-size: 0.8rem; color: #0c4a6e;">Forward invoices to <b>add@quickbills.ai</b></span>
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <span style="font-weight: 600; color: #0369a1;">📱 Mobile App</span><br>
+                    <span style="font-size: 0.8rem; color: #0c4a6e;">Snap & upload on the go</span>
+                </div>
+                <div>
+                    <span style="font-weight: 600; color: #0369a1;">🔄 Xero Integration</span><br>
+                    <span style="font-size: 0.8rem; color: #0c4a6e;">More ERP support coming</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
         # --- Support Section ---
         st.markdown("---")
         st.markdown("### 💬 Support")
