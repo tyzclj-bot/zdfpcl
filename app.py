@@ -229,8 +229,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def get_extractor_v2():
-    """Use Streamlit cache to create and reuse AI extractor instance (Version 2)"""
+def get_extractor_v3():
+    """Use Streamlit cache to create and reuse AI extractor instance (Version 3 - Extreme Audit)"""
     return AIInvoiceExtractor()
 
 def init_supabase():
@@ -918,7 +918,7 @@ def main():
                             st.error("Insufficient credits!")
                             return
 
-                        extractor = get_extractor_v2() # Get cached instance (v2)
+                        extractor = get_extractor_v3() # Get cached instance (v3)
                         
                         # --- Multi-step "Ritual" Loading ---
                         with st.status("Processing Invoice...", expanded=True) as status:
@@ -997,6 +997,10 @@ def main():
                         st.markdown(data["diagnostic_description"])
                         st.info("This is a diagnostic run. We are checking the connection to the vision model.")
                         return # Stop rendering
+
+                    # Warning Display (New)
+                    if data.get("warning"):
+                        st.warning(f"⚠️ **Audit Warning:** {data.get('warning')}")
 
                     # Key Metrics Row
                     m1, m2, m3 = st.columns(3)

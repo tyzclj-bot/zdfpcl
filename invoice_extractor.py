@@ -27,6 +27,7 @@ class InvoiceData(BaseModel):
     items: List[InvoiceItem] = Field(default_factory=list, description="List of invoice items")
     total_amount: float = Field(..., description="Total invoice amount")
     currency: str = Field("USD", description="Currency code")
+    warning: Optional[str] = Field(None, description="Audit warning for suspected OCR or logic errors")
 
 class AIInvoiceExtractor:
     def __init__(self):
@@ -58,9 +59,15 @@ class AIInvoiceExtractor:
         **CRITICAL EXTRACTION RULES (MUST FOLLOW):**
         1. **Exclude Keywords:** COMPLETELY IGNORE lines containing 'SUBTOTAL', 'TOTAL', 'CASH', 'CHANGE', 'BALANCE', 'TAX' when parsing line items. These are NOT product items.
         2. **Amount Extraction:** For each line item, the 'total_price' is usually the number on the FAR RIGHT of the line.
-        3. **Quantity Logic:** Default 'quantity' to 1 unless you explicitly see an '@' symbol (e.g., "3 @ 1.50").
+        3. **Quantity Logic:** Default 'quantity' to 1 unless you explicitly see an '@' symbol (e.g., "3 @ 1.50"). Do NOT guess quantity based on price.
         4. **Strict Validation:** Before outputting JSON, you MUST verify: Sum(items.total_price) + Tax ~= Total Amount. If they don't match, re-read the line items to ensure you didn't include a 'Subtotal' line as an item.
         5. **Date Format:** Convert all dates to 'MM/DD/YYYY' format.
+        
+        **EXTREME AUDIT LOGIC (FOR WALMART & RETAIL RECEIPTS):**
+        1. **Decimal Restoration:** OCR often misses decimal points (e.g., reads '$4.03' as '03' or '403'). If you see an integer like '60', '03', '63' in a price column, it is highly likely '2.60', '4.03', '6.63'. Use context to restore the float value.
+        2. **Walmart Barcodes:** In Walmart receipts, the first number under a product name is often a barcode, and the SECOND number is the price. The 'SUBTOTAL' line immediately follows the last item - do NOT include it as an item.
+        3. **Realism Check:** Do NOT invent unit prices to make the math work. If a price seems impossible (e.g., $60 for a small grocery item), flag it in the 'warning' field: "OCR accuracy issue suspected near [Item Name]".
+        4. **Sum over Accuracy:** It is better to have a Sum(Line Items) that slightly mismatches the Total than to hallucinate prices.
 
         You must strictly follow this JSON Schema:
         {json.dumps(schema, indent=2)}
