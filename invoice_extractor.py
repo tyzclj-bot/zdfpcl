@@ -55,6 +55,13 @@ class AIInvoiceExtractor:
         prompt = f"""
         You are a professional financial audit assistant. Please extract key information from the following invoice text and return it in the required JSON format.
         
+        **CRITICAL EXTRACTION RULES (MUST FOLLOW):**
+        1. **Exclude Keywords:** COMPLETELY IGNORE lines containing 'SUBTOTAL', 'TOTAL', 'CASH', 'CHANGE', 'BALANCE', 'TAX' when parsing line items. These are NOT product items.
+        2. **Amount Extraction:** For each line item, the 'total_price' is usually the number on the FAR RIGHT of the line.
+        3. **Quantity Logic:** Default 'quantity' to 1 unless you explicitly see an '@' symbol (e.g., "3 @ 1.50").
+        4. **Strict Validation:** Before outputting JSON, you MUST verify: Sum(items.total_price) + Tax ~= Total Amount. If they don't match, re-read the line items to ensure you didn't include a 'Subtotal' line as an item.
+        5. **Date Format:** Convert all dates to 'MM/DD/YYYY' format.
+
         You must strictly follow this JSON Schema:
         {json.dumps(schema, indent=2)}
         
