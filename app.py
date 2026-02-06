@@ -1074,12 +1074,28 @@ def main():
                         st.caption("This is the raw text extracted from your document before AI processing.")
                         
                         raw_display = "Waiting for upload..."
+                        source = "Init"
+                        
                         if "raw_ocr_output" in st.session_state:
                             raw_display = st.session_state.raw_ocr_output
-                        elif data.get("_raw_text"):
+                            source = "Session State"
+                        elif isinstance(data, dict) and data.get("_raw_text"):
                             raw_display = data.get("_raw_text")
-                            
-                        st.text_area("Raw Text Content", value=raw_display, height=400, disabled=True)
+                            source = "Data Object"
+                        
+                        st.text_area("Raw Text Content", value=raw_display, height=400, disabled=False)
+                        
+                        # Debugging Info (Hidden by default)
+                        with st.expander("🛠️ Developer Debug Info"):
+                            st.write(f"**Data Source:** {source}")
+                            st.write("**Session Keys:**", list(st.session_state.keys()))
+                            if isinstance(data, dict):
+                                st.write("**Data Keys:**", list(data.keys()))
+                                st.write("**Has _raw_text:**", "_raw_text" in data)
+                                if "_raw_text" in data:
+                                    st.write("**_raw_text length:**", len(data["_raw_text"]))
+                            else:
+                                st.write("**Data Type:**", type(data))
 
                     st.divider()
                     
