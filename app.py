@@ -802,7 +802,7 @@ def main():
         faq1, faq2, faq3 = st.columns(3)
         with faq1:
             st.markdown("**Is my data secure?**")
-            st.caption("Yes. We use SSL encryption and do not permanently store your files. All data is processed with bank-grade security protocols.")
+            st.caption("Yes. We use SSL encryption and do not permanently store your files. We are a Hong Kong / Taiwan based team serving global users, adhering to strict privacy standards.")
         with faq2:
             st.markdown("**Can it handle non-standard invoices?**")
             st.caption("Absolutely. Our AI engine outperforms traditional OCR by understanding context, allowing it to accurately parse complex and non-standard layouts.")
@@ -1095,7 +1095,7 @@ def main():
                 <div class="trust-col">
                     <div class="trust-icon">🛡️</div>
                     <div class="trust-title">100% Secure</div>
-                    <div class="trust-desc">No sensitive files stored. Bank-grade SSL encryption.</div>
+                    <div class="trust-desc">No sensitive files stored. Hong Kong / Taiwan based team serving global users.</div>
                 </div>
                 <div class="trust-col">
                     <div class="trust-icon">⚡</div>
