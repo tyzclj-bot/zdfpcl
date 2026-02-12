@@ -614,15 +614,19 @@ def main():
                          st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
 
                 if st.session_state.credits <= 0:
-                    st.error("Please Top Up")
+                    st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
+                    # Lemon Squeezy Checkout URL (Placeholder)
+                    checkout_url = "https://quickbills.lemonsqueezy.com/checkout/buy/pro-plan"
+                    st.link_button("🚀 Upgrade to Pro - $19.9", checkout_url, type="primary", use_container_width=True)
                 
-                # Upgrade/Top Up Button
+                # Upgrade/Top Up Button (Sidebar always shows if not pro)
                 if plan_status != 'pro':
-                    checkout_url = "https://www.paypal.com/invoice/p/#FNC8963Z27RBSCZ5"
-                    st.link_button("💎 Top Up Credits", checkout_url, type="primary", use_container_width=True)
+                    # Lemon Squeezy Checkout URL (Placeholder)
+                    checkout_url = "https://quickbills.lemonsqueezy.com/checkout/buy/pro-plan"
+                    st.link_button("💎 Get Pro - $19.9/mo", checkout_url, type="secondary", use_container_width=True)
                     st.markdown("""
                         <div class="secure-badge">
-                            <span>🔒 Secured by PayPal</span>
+                            <span>🔒 Secured by Lemon Squeezy</span>
                         </div>
                     """, unsafe_allow_html=True)
 
