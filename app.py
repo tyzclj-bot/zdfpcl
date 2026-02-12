@@ -615,15 +615,15 @@ def main():
 
                 if st.session_state.credits <= 0:
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
-                    # Lemon Squeezy Checkout URL (Placeholder)
-                    checkout_url = "https://quickbills.lemonsqueezy.com/checkout/buy/pro-plan"
-                    st.link_button("🚀 Upgrade to Pro - $19.9", checkout_url, type="primary", use_container_width=True)
+                    # Lemon Squeezy Checkout URL
+                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                    st.link_button("🚀 Upgrade to Pro - $19.99", checkout_url, type="primary", use_container_width=True)
                 
                 # Upgrade/Top Up Button (Sidebar always shows if not pro)
                 if plan_status != 'pro':
-                    # Lemon Squeezy Checkout URL (Placeholder)
-                    checkout_url = "https://quickbills.lemonsqueezy.com/checkout/buy/pro-plan"
-                    st.link_button("💎 Get Pro - $19.9/mo", checkout_url, type="secondary", use_container_width=True)
+                    # Lemon Squeezy Checkout URL
+                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                    st.link_button("💎 Get Pro - $19.99/mo", checkout_url, type="secondary", use_container_width=True)
                     st.markdown("""
                         <div class="secure-badge">
                             <span>🔒 Secured by Lemon Squeezy</span>
@@ -742,6 +742,18 @@ def main():
                                     st.success("Account created! Please check your email to confirm.")
                             except Exception as e:
                                 st.error(str(e))
+                
+                # --- Payment for Guest Users ---
+                st.markdown("---")
+                st.markdown("### 💎 Go Pro")
+                st.caption("Unlock unlimited processing and 24/7 support.")
+                checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                st.link_button("Subscribe Now - $19.99", checkout_url, type="secondary", use_container_width=True)
+                st.markdown("""
+                    <div class="secure-badge">
+                        <span>🔒 Secured by Lemon Squeezy</span>
+                    </div>
+                """, unsafe_allow_html=True)
 
         st.divider()
         
@@ -898,6 +910,67 @@ def main():
                     <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">✅</div>
                     <div style="font-weight: 600; color: #334155;">QuickBooks Compatible</div>
                  </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Pricing Section
+        st.markdown("""
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Simple Pricing</h2>
+                <p style="color: #64748b;">Get started for free or upgrade for unlimited power.</p>
+            </div>
+            <div style="
+                display: flex;
+                justify-content: center;
+                margin-bottom: 4rem;
+            ">
+                <div style="
+                    background: white;
+                    border: 2px solid #3b82f6;
+                    border-radius: 16px;
+                    padding: 2.5rem;
+                    max-width: 450px;
+                    width: 100%;
+                    text-align: center;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                ">
+                    <div style="background: #eff6ff; color: #1d4ed8; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 700; margin-bottom: 1rem;">
+                        MOST POPULAR
+                    </div>
+                    <h2 style="color: #1e293b; margin-bottom: 0.5rem; font-size: 1.75rem;">Standard Plan</h2>
+                    <div style="font-size: 3.5rem; font-weight: 800; color: #1e293b; margin-bottom: 1rem;">
+                        $19.99<span style="font-size: 1.25rem; color: #64748b; font-weight: 400;">/mo</span>
+                    </div>
+                    <ul style="text-align: left; color: #475569; margin-bottom: 2.5rem; list-style: none; padding: 0; font-size: 1.1rem;">
+                        <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                            <span style="color: #10b981; margin-right: 0.75rem;">✔</span> Unlimited Invoice Processing
+                        </li>
+                        <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                            <span style="color: #10b981; margin-right: 0.75rem;">✔</span> Extreme AI Accuracy (99.9%)
+                        </li>
+                        <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                            <span style="color: #10b981; margin-right: 0.75rem;">✔</span> Bulk Export to QuickBooks CSV
+                        </li>
+                        <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                            <span style="color: #10b981; margin-right: 0.75rem;">✔</span> 24/7 Priority Support
+                        </li>
+                    </ul>
+                    <a href="https://quickbills-ai.lemonsqueezy.com" target="_blank" style="
+                        display: block;
+                        background: #3b82f6;
+                        color: white;
+                        text-decoration: none;
+                        padding: 1.25rem;
+                        border-radius: 12px;
+                        font-weight: 700;
+                        font-size: 1.25rem;
+                        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+                        transition: all 0.2s;
+                    ">Subscribe Now</a>
+                    <p style="margin-top: 1.25rem; font-size: 0.9rem; color: #94a3b8;">
+                        🔒 Secure checkout via Lemon Squeezy
+                    </p>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
