@@ -142,7 +142,7 @@ class AIInvoiceExtractor:
     def parse_with_ai(self, text: str, ocr_results_with_boxes: List, retry_count: int = 0, feedback_message: Optional[str] = None) -> InvoiceData:
         """Use DeepSeek to convert unstructured text to structured JSON, with retry mechanism and feedback."""
         
-        MAX_RETRIES = 2 # Allow up to 2 retries
+        MAX_RETRIES = 1 # Allow up to 1 retry (total of 2 attempts: initial + 1 retry)
         
         schema = InvoiceData.model_json_schema()
         
@@ -157,39 +157,54 @@ class AIInvoiceExtractor:
         4. **Strict Validation:** Before outputting JSON, you MUST verify: Sum(items.total_price) + tax_amount ~= Total Amount.
         5. **Date Format:** Convert all dates to 'MM/DD/YYYY' format.
 
-        **FEW-SHOT EXAMPLE (Walmart Weighted Items Correction):**
-        This is a critical example to prevent previous errors in weighted item extraction.
-        OCR Text Snippet (Hypothetical Multi-line, but pre-processed into one line for you):
+        **CRITICAL EXTRACTION RULES (CONTINUED):**
+        6. **Walmart Total Suffixes:** For Walmart receipts, the TRUE Total Price often has 'N' or 'X' immediately following the number (e.g., '14.97 X', '2.48 N', '3.61 N'). This 'N' or 'X' is part of the visual cue for the final price.
+
+        **FEW-SHOT EXAMPLE (Walmart Weighted Items Correction - CRITICAL):**
+        This example is CRUCIAL for correctly handling weighted items, especially from Walmart.
+        
+        **Understanding the "Weighted Item Block" Structure:**
+        Often, a weighted item appears across multiple visual lines, but conceptually it's ONE item.
+        Example OCR Text Block:
         ---
-        RED GRAPE 2.51 lb @ 1.44 /lb 3.61
+        RED GRAPE
+        2.51 lb @ 1.44 /lb
+        3.61 N
         ---
-        Bad Example of your previous extraction logic (AVOID THIS):
+        
+        **CRITICAL INSTRUCTION for "lb @" lines:**
+        When you encounter a line with "lb @" (e.g., "2.51 lb @ 1.44 /lb"), all numbers on THIS SPECIFIC LINE (e.g., 2.51, 1.44) are **DESCRIPTION/QUANTITY/UNIT PRICE information ONLY**. They **MUST ABSOLUTELY NOT** be extracted as the `total_price` for the item. The true `total_price` for this weighted item WILL ALWAYS be on the **NEXT LINE** (e.g., "3.61 N").
+        
+        **Bad Example of your previous extraction logic (AVOID THIS AT ALL COSTS - THIS IS WRONG):**
         ```json
         [
-          {{
+          {
             "description": "RED GRAPE",
             "total_price": 2.48 // INCORRECT - This was another item's price, or part of the weight was taken as price
-          }},
-          {{
+          },
+          {
             "description": "1lb/1.44", // INCORRECT - This is part of the weight/unit info
-            "total_price": 2.51 // INCORRECT - This is the weight, not the final price
-          }}
+            "total_price": 2.51 // INCORRECT - This is the weight, NOT the final price.
+          }
         ]
         ```
         
-        Correct Example of desired extraction logic (FOLLOW THIS):
+        **Correct Example of desired extraction logic (FOLLOW THIS PRECISELY):**
         ```json
         [
-          {{
+          {
             "description": "RED GRAPE",
             "quantity": 2.51,
             "unit_price": 1.44,
-            "total_price": 3.61 // CORRECT - This is the final calculated price for the item
-          }}
+            "total_price": 3.61 // CORRECT - This is the final calculated price for the item, identified from the next line with 'N' or 'X' suffix.
+          }
         ]
         ```
         
-        **CRITICAL INSTRUCTION**: NEVER interpret a number immediately followed by "lb", "@", "per", or "/" as the `total_price` or `unit_price`. These are weight, quantity, or unit indicators. The `total_price` for weighted items MUST be the final monetary value, typically found at the far right of the consolidated line (e.g., '3.61' in the example above). When 'lb' or '@' is present, look for the 'quantity' and 'unit_price' explicitly.
+        **Reinforced CRITICAL INSTRUCTION**:
+        1. **NEVER** interpret a number immediately followed by "lb", "@", "per", or "/" as the `total_price`. These are weight, quantity, or unit indicators.
+        2. For weighted items, the `total_price` MUST be the final monetary value, typically found on the line *immediately following* the "lb @" line, and often has 'N' or 'X' suffix (e.g., '3.61 N').
+        3. When 'lb' or '@' is present, explicitly extract the `quantity` and `unit_price` from that line if available.
 
         **EXTREME AUDIT LOGIC (FOR WALMART & RETAIL RECEIPTS):**
         1. **行合并处理 (Line Merging Applied):** The input text has already been pre-processed. Lines containing 'lb' or '@' have been merged with their associated product description. You MUST NOT treat these as separate line items. Focus on extracting the final, consolidated item.
@@ -247,6 +262,18 @@ class AIInvoiceExtractor:
             post_processing_warnings = []
             Y_TOLERANCE = 5 # pixels
 
+            # NEW: Collect all potential weight values from raw OCR for "强校验覆盖"
+            weight_qty_pattern_for_check = re.compile(r'(\d+\.?\d*)\s*(lb|@|/|kg|g|oz)\b', re.IGNORECASE)
+            potential_weight_values = set()
+            for bbox, text_ocr, prob in ocr_results_with_boxes:
+                weight_match = weight_qty_pattern_for_check.search(text_ocr.lower())
+                if weight_match:
+                    try:
+                        potential_weight_values.add(float(weight_match.group(1)))
+                    except ValueError:
+                        pass # Ignore if conversion to float fails
+
+
             # 1. 排除“非金额数字” (Exclude "Non-Monetary Numbers")
             # 遍历AI提取出的items，检查total_price是否可能被误认为是重量/数量
             for item in structured_data.items:
@@ -260,8 +287,8 @@ class AIInvoiceExtractor:
                 
                 # Check for "lb", "@", "/" patterns associated with a number in the description
                 # If the item description itself is a number followed by lb/etc., it's suspicious
-                if re.search(r'\b\d+\.\d+\s*(lb|@|/|kg|g|oz)\b', desc_lower) and \
-                   math.isclose(item.total_price, float(re.search(r'(\d+\.\d+)', desc_lower).group(1)) if re.search(r'(\d+\.\d+)', desc_lower) else -1, rel_tol=1e-2):
+                if re.search(r'\b\d+\.?\d*\s*(lb|@|/|kg|g|oz)\b', desc_lower) and \
+                   math.isclose(item.total_price, float(re.search(r'(\d+\.\d+)', desc_lower).group(1)) if re.search(r'(\d+\.?\d*)', desc_lower) else -1, rel_tol=1e-2):
                     
                     warning_msg = f"Item '{item.description}' with price {item.total_price} detected as potential non-monetary number (weight/qty confusion)."
                     post_processing_warnings.append(warning_msg)
@@ -269,6 +296,22 @@ class AIInvoiceExtractor:
                     # Optionally, reset total_price to 0 or None to force AI to re-evaluate
                     # For now, we'll just warn and let AI re-prompt handle the correction.
                     # item.total_price = 0.0 
+
+            # NEW: 强校验覆盖 (Strong Validation Overlay) - check if extracted Total equals Weight
+            for item in structured_data.items:
+                if item.total_price > 0: # Only check valid prices
+                    for pw in potential_weight_values:
+                        if math.isclose(item.total_price, pw, rel_tol=1e-2):
+                            warning_msg = (
+                                f"CRITICAL ERROR: Item '{item.description}' extracted total_price ({item.total_price}) "
+                                f"numerically matches a detected weight value ({pw}) from OCR text. "
+                                "This is a strong indication of weight being mistaken for price. "
+                                "This item's total_price is likely incorrect and has been reset to 0 to force re-evaluation."
+                            )
+                            post_processing_warnings.append(warning_msg)
+                            item.warning = (item.warning or "") + warning_msg
+                            item.total_price = 0.0 # Force a mathematical discrepancy and trigger retry
+                            break # Move to next item after finding a critical error
 
             # 2. 坐标归一化（Spatial Awareness）
             for item in structured_data.items:
