@@ -1302,7 +1302,7 @@ def main():
                         filename = f"QuickBills_Export_{date_str}.csv"
                         
                         st.download_button(
-                            label="下载 CSV 文件",
+                            label="Download CSV File",
                             data=csv,
                             file_name=filename,
                             mime="text/csv",

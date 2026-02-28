@@ -207,15 +207,15 @@ class AIInvoiceExtractor:
         3. When 'lb' or '@' is present, explicitly extract the `quantity` and `unit_price` from that line if available.
 
         **EXTREME AUDIT LOGIC (FOR WALMART & RETAIL RECEIPTS):**
-        1. **行合并处理 (Line Merging Applied):** The input text has already been pre-processed. Lines containing 'lb' or '@' have been merged with their associated product description. You MUST NOT treat these as separate line items. Focus on extracting the final, consolidated item.
-        2. **强制配对校验 (Strict Row-Locking):** Each extracted Line Item MUST consist of a [Product Description] and its [Associated Total Price]. If a line appears to have only a description without a price, or only a price without a description, you MUST NOT attempt to match it across different lines. If an item is clearly missing a pair, mark the entire item with a 'warning' field: "Parsing error: Item or Price missing for this line."
-        3. **针对性屏蔽 (The "lb" Trap):** You are STRICTLY FORBIDDEN from interpreting numbers immediately followed by "lb" (e.g., "2.51 lb") as a Unit Price or Total Price. These are weights. The monetary amount for an item MUST be a number in XX.XX format, typically located at the far right end of the line, representing the final item total.
+        1. **Line Merging Applied:** The input text has already been pre-processed. Lines containing 'lb' or '@' have been merged with their associated product description. You MUST NOT treat these as separate line items. Focus on extracting the final, consolidated item.
+        2. **Strict Row-Locking:** Each extracted Line Item MUST consist of a [Product Description] and its [Associated Total Price]. If a line appears to have only a description without a price, or only a price without a description, you MUST NOT attempt to match it across different lines. If an item is clearly missing a pair, mark the entire item with a 'warning' field: "Parsing error: Item or Price missing for this line."
+        3. **The "lb" Trap:** You are STRICTLY FORBIDDEN from interpreting numbers immediately followed by "lb" (e.g., "2.51 lb") as a Unit Price or Total Price. These are weights. The monetary amount for an item MUST be a number in XX.XX format, typically located at the far right end of the line, representing the final item total.
         4. **Decimal Restoration:** OCR often misses decimal points (e.g., reads '$4.03' as '03' or '403'). If you see an integer like '60', '03', '63' in a price column, it is highly likely '2.60', '4.03', '6.63'. Use context to restore the float value.
         5. **Walmart Barcodes:** In Walmart receipts, the first number under a product name is often a barcode, and the SECOND number is the price. The 'SUBTOTAL' line immediately follows the last item - do NOT include it as an item.
         6. **Realism Check:** Do NOT invent unit prices to make the math work. If a price seems impossible (e.g., $60 for a small grocery item), flag it in the 'warning' field: "OCR accuracy issue suspected near [Item Name]".
         7. **Sum over Accuracy:** It is better to have a Sum(Line Items) that slightly mismatches the Total than to hallucinate prices.
-        8. **数学校验 (Mathematical Validation):** After initial extraction, internally perform a self-check: Quantity * Unit Price == Item Total. If there is a mismatch (e.g., 2.51 * 1.44 != 2.51), you MUST re-examine the parsing of that specific line to correct the values. If unit price is not explicitly available, infer it from total_price / quantity, then re-verify.
-        9. **强制对账 (Forced Reconciliation):** If Sum(items.total_price) + tax_amount != total_amount (Grand Total), you MUST re-audit all extracted numerical values to ensure no weight (lb), quantity (Qty), or UPC codes have been mistakenly interpreted as monetary amounts. Correct any such misinterpretations.
+        8. **Mathematical Validation:** After initial extraction, internally perform a self-check: Quantity * Unit Price == Item Total. If there is a mismatch (e.g., 2.51 * 1.44 != 2.51), you MUST re-examine the parsing of that specific line to correct the values. If unit price is not explicitly available, infer it from total_price / quantity, then re-verify.
+        9. **Forced Reconciliation:** If Sum(items.total_price) + tax_amount != total_amount (Grand Total), you MUST re-audit all extracted numerical values to ensure no weight (lb), quantity (Qty), or UPC codes have been mistakenly interpreted as monetary amounts. Correct any such misinterpretations.
 
         You must strictly follow this JSON Schema:
         {json.dumps(schema, indent=2)}
@@ -258,11 +258,11 @@ class AIInvoiceExtractor:
             invoice_dict = json.loads(content)
             structured_data = InvoiceData(**invoice_dict)
 
-            # --- NEW POST-PROCESSING LOGIC (优先级高于数学审计) ---
+            # --- NEW POST-PROCESSING LOGIC (Priority over Math Audit) ---
             post_processing_warnings = []
             Y_TOLERANCE = 5 # pixels
 
-            # NEW: Collect all potential weight values from raw OCR for "强校验覆盖"
+            # NEW: Collect all potential weight values from raw OCR for "Strong Validation Overlay"
             weight_qty_pattern_for_check = re.compile(r'(\d+\.?\d*)\s*(lb|@|/|kg|g|oz)\b', re.IGNORECASE)
             potential_weight_values = set()
             for bbox, text_ocr, prob in ocr_results_with_boxes:
@@ -274,10 +274,10 @@ class AIInvoiceExtractor:
                         pass # Ignore if conversion to float fails
 
 
-            # 1. 排除“非金额数字” (Exclude "Non-Monetary Numbers")
-            # 遍历AI提取出的items，检查total_price是否可能被误认为是重量/数量
+            # 1. Exclude "Non-Monetary Numbers"
+            # Iterate through AI-extracted items and check if total_price might be mistakenly interpreted as weight/quantity
             for item in structured_data.items:
-                # 检查描述中是否有重量/数量单位紧跟数字，且total_price与该数字接近
+                # Check if the description contains weight/quantity units followed by a number, and if total_price is close to that number
                 desc_lower = item.description.lower()
                 
                 # Pattern: "X.XXlb", "X.XX @", "X.XX /" (where X.XX is the total_price)
@@ -297,7 +297,7 @@ class AIInvoiceExtractor:
                     # For now, we'll just warn and let AI re-prompt handle the correction.
                     # item.total_price = 0.0 
 
-            # NEW: 强校验覆盖 (Strong Validation Overlay) - check if extracted Total equals Weight
+            # NEW: Strong Validation Overlay - check if extracted Total equals Weight
             for item in structured_data.items:
                 if item.total_price > 0: # Only check valid prices
                     for pw in potential_weight_values:
@@ -313,7 +313,7 @@ class AIInvoiceExtractor:
                             item.total_price = 0.0 # Force a mathematical discrepancy and trigger retry
                             break # Move to next item after finding a critical error
 
-            # 2. 坐标归一化（Spatial Awareness）
+            # 2. Spatial Awareness (Y-axis alignment)
             for item in structured_data.items:
                 desc_bbox_info = self._find_text_bbox(item.description, ocr_results_with_boxes)
                 price_str = f"{item.total_price:.2f}" # Format to match how it might appear in OCR
@@ -337,13 +337,13 @@ class AIInvoiceExtractor:
                 elif not price_bbox_info:
                     post_processing_warnings.append(f"Could not find bounding box for item price: '{price_str}'.")
 
-            # 将后处理警告添加到结构化数据的总警告中
+            # Add post-processing warnings to the structured data's overall warnings
             if post_processing_warnings:
                 structured_data.warning = (structured_data.warning or "") + "\nPost-processing warnings: " + "; ".join(post_processing_warnings)
 
             # --- END NEW POST-PROCESSING LOGIC ---
 
-            # --- Post-processing: Internal Calculation Audit (数学强制对齐) ---
+            # --- Post-processing: Internal Calculation Audit (Math Forced Alignment) ---
             calculated_items_total = sum(item.total_price for item in structured_data.items)
             calculated_grand_total = calculated_items_total + structured_data.tax_amount
             
@@ -387,7 +387,7 @@ class AIInvoiceExtractor:
                             "Double-check that numbers with 'lb', '@', or '/' were not mistaken for prices."
                         )
                     else: # General feedback for larger discrepancies
-                        # 针对沃尔玛的特殊补丁 - reinforce for AI
+                        # Walmart specific patch - reinforce for AI
                         feedback_parts.append(
                             "REMINDER for Walmart-like receipts: When you see patterns like '[TEXT] [WEIGHT] [PRICE]' on a line, "
                             "ensure that the number at the end of the line (e.g., '3.61') is always the 'total_price', "
