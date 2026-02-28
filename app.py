@@ -287,7 +287,6 @@ def init_supabase():
         key = st.session_state.supabase_key
         
     if url and key:
-        print(f"DEBUG: Initializing Supabase with URL: {url} and Key: {'*' * len(key) if key else 'None'}")
         return SupabaseManager(url, key)
     return None
 
