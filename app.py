@@ -896,7 +896,7 @@ def main():
                 border: 1px solid #e2e8f0;
             ">
                 <iframe 
-                    src="https://www.loom.com/embed/74ac71240953463ca8825d89d2898f35?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true" 
+                    src="https://www.loom.com/embed/8c9a8a8ff70a4b2b977fdb64d9c5ba38?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true" 
                     frameborder="0" 
                     webkitallowfullscreen 
                     mozallowfullscreen 
