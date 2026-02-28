@@ -147,6 +147,23 @@ st.markdown("""
         transform: scale(1.02);
     }
 
+    /* Custom style for the Download CSV button */
+    [data-testid="stDownloadButton-download_csv_button"] button {
+        background-color: #ef4444; /* A nice red color */
+        color: white;
+        font-size: 1.1rem; /* Slightly larger font */
+        padding: 0.75rem 1.5rem; /* Larger padding */
+        border-radius: 0.5rem; /* Consistent border-radius */
+        border: 1px solid #dc2626; /* Darker red border */
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease-in-out;
+    }
+
+    [data-testid="stDownloadButton-download_csv_button"] button:hover {
+        background-color: #dc2626; /* Darker red on hover */
+        border-color: #b91c1c;
+    }
+
     /* Style for the main action button */
     .st-emotion-cache-19n6bn1 {
         background-image: linear-gradient(to right, #4f46e5, #7c3aed);
@@ -1265,7 +1282,7 @@ def main():
 
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        if st.button("🚀 Sync to QuickBooks"):
+                        if st.button("Auto-Sync (Pro Plan Coming Soon)", disabled=True):
                             show_waitlist_modal()
                             # Fake Door Test: Replaced actual sync with waitlist modal
                             # with st.spinner("Connecting to QuickBooks Online..."):
@@ -1285,12 +1302,13 @@ def main():
                         filename = f"QuickBills_Export_{date_str}.csv"
                         
                         st.download_button(
-                            label="📥 Download QuickBooks CSV",
+                            label="下载 CSV 文件",
                             data=csv,
                             file_name=filename,
                             mime="text/csv",
-                            type="primary",
-                            use_container_width=True
+                            type="secondary", # Changed to secondary to allow custom styling
+                            use_container_width=True,
+                            key="download_csv_button" # Added key for custom CSS targeting
                         )
 
                     with c3:
