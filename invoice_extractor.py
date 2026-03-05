@@ -319,7 +319,7 @@ class AIInvoiceExtractor:
                     processed_items.append(InvoiceItem(
                         description=item_dict.get('description', 'Unidentified Item'),
                         total_price=0.0,
-                        warning=f"Parsing failed: {e}. Original data: {str(item_dict)[:200]}..."
+                        warning=f"Parsing failed: {e}. Original data: {json.dumps(item_dict, ensure_ascii=False)[:200]}..."
                     ))
             invoice_dict['items'] = processed_items # Replace with robustly parsed items
 
