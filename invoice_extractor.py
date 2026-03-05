@@ -32,11 +32,8 @@ from pydantic import BaseModel, Field
 import config
 import os
 import requests
-import easyocr # Moved import here for broader scope
-import numpy as np
-import cv2
 import math # Added for floating point comparisons
-import re # Added for regex operations
+
 
 
 logger = logging.getLogger(__name__)
@@ -528,17 +525,12 @@ class AIInvoiceExtractor:
         """
         Use EasyOCR to extract text from images, then send to DeepSeek for structuring.
         """
+        import easyocr
+        import numpy as np
+        import cv2
+
         logger.info("Starting OCR processing for image...")
-        try:
-            # Imports are now at the top of the file.
-            # import easyocr
-            # import numpy as np
-            # import cv2
-            pass
-        except ImportError:
-            return {
-                "error": "Missing necessary OCR libraries. Please run in terminal: pip install easyocr opencv-python-headless"
-            }
+
 
         try:
             # 1. Convert image bytes to OpenCV format
