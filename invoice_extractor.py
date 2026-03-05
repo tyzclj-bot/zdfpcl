@@ -199,10 +199,11 @@ class AIInvoiceExtractor:
         ]
         ```
         
-        **Reinforced CRITICAL INSTRUCTION**:
+        **Reinforced CRITICAL INSTRUCTION:**
         1. **NEVER** interpret a number immediately followed by "lb", "@", "per", or "/" as the `total_price`. These are weight, quantity, or unit indicators.
         2. For weighted items, the `total_price` MUST be the final monetary value, typically found on the line *immediately following* the "lb @" line, and often has 'N' or 'X' suffix (e.g., '3.61 N').
         3. When 'lb' or '@' is present, explicitly extract the `quantity` and `unit_price` from that line if available.
+        4. **ABSOLUTELY CRITICAL: All numerical fields (total_price, quantity, unit_price, total_amount, tax_amount) MUST be pure numbers (floats or integers), without any appended text, comments, or explanations. NEVER include "//" or any descriptive text within a numerical JSON value. If a value is not a pure number, it indicates an extraction failure for that field.**
 
         **EXTREME AUDIT LOGIC (FOR WALMART & RETAIL RECEIPTS):**
         1. **Line Merging Applied:** The input text has already been pre-processed. Lines containing 'lb' or '@' have been merged with their associated product description. You MUST NOT treat these as separate line items. Focus on extracting the final, consolidated item.
@@ -292,7 +293,18 @@ class AIInvoiceExtractor:
                 logger.error(f"Failed to parse tax_amount: {invoice_dict.get('tax_amount')}. Error: {e}")
                 invoice_dict['tax_amount'] = 0.0
             
-            structured_data = InvoiceData(**invoice_dict)
+            try:
+                structured_data = InvoiceData(**invoice_dict)
+            except Exception as e:
+                logger.error(f"Pydantic validation or InvoiceData construction failed: {e}. Raw data: {invoice_dict}")
+                # Return a default InvoiceData object with a warning
+                structured_data = InvoiceData(
+                    vendor_name="Unknown",
+                    total_amount=0.0,
+                    tax_amount=0.0,
+                    currency="USD",
+                    warning=f"InvoiceData parsing failed: {e}. Original data might be malformed."
+                )
 
             # --- NEW POST-PROCESSING LOGIC (Priority over Math Audit) ---
             post_processing_warnings = []
