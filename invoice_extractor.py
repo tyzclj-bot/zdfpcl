@@ -139,25 +139,26 @@ class AIInvoiceExtractor:
         return "\n".join(final_processed_lines)
 
 
-    def _sanitize_numerical_field(self, value: Any) -> Any:
-        """Strips // comments from a string that should be a number."""
+    def _sanitize_numerical_field(self, value: Any) -> float:
+        """
+        Extracts a pure number from a string, or converts existing numbers to float.
+        If extraction/conversion fails, returns 0.0.
+        """
+        if isinstance(value, (int, float)):
+            return float(value) # Already a number, ensure float type
+
         if isinstance(value, str):
-            # Regex to find a potential number (integer or float) at the beginning
-            # followed by optional spaces and then `//` and anything after it.
-            # We want to capture only the numerical part.
-            match = re.match(r'\s*(\d+\.?\d*)\s*//.*', value)
+            # Use re.search to find the first sequence of digits and optional decimal point.
+            # This is robust to comments (e.g., "2.48 // check") or suffixes (e.g., "3.61 N").
+            match = re.search(r'\d+\.?\d*', value)
             if match:
-                return match.group(1).strip()
-            # If no // comment, but it's a string that should be a number, try to convert
-            try:
-                # If it can be converted to float, it's a valid number string
-                float(value)
-                return value
-            except ValueError:
-                # If it's a string that cannot be converted to float,
-                # and no // comment was found, return original (let Pydantic handle it)
-                pass
-        return value
+                numerical_str = match.group(0) # Get the matched numerical part
+                try:
+                    return float(numerical_str)
+                except ValueError:
+                    pass # Fall through to return 0.0
+
+        return 0.0 # Default for all other cases (non-string, non-numeric, or failed extraction/conversion)
 
     def _recursive_sanitize_numerical_fields(self, data: Any) -> Any:
         """Recursively sanitizes numerical fields in a dict or list."""
@@ -165,14 +166,14 @@ class AIInvoiceExtractor:
             new_dict = {}
             for k, v in data.items():
                 if k in ["total_price", "quantity", "unit_price", "total_amount", "tax_amount"]:
-                    new_dict[k] = self._sanitize_numerical_field(v)
+                    new_dict[k] = self._sanitize_numerical_field(v) # This now always returns float
                 else:
                     new_dict[k] = self._recursive_sanitize_numerical_fields(v)
             return new_dict
         elif isinstance(data, list):
             return [self._recursive_sanitize_numerical_fields(item) for item in data]
         else:
-            return data
+            return data # For non-dict, non-list values, return as is (e.g., descriptions)
 
     def parse_with_ai(self, text: str, ocr_results_with_boxes: List, retry_count: int = 0, feedback_message: Optional[str] = None) -> InvoiceData:
         """Use DeepSeek to convert unstructured text to structured JSON, with retry mechanism and feedback."""
@@ -310,14 +311,7 @@ class AIInvoiceExtractor:
             original_items = invoice_dict.get('items', [])
             for item_dict in original_items:
                 try:
-                    # Attempt to parse item, ensuring total_price is a float
-                    item_dict['total_price'] = float(item_dict['total_price']) # Ensure type conversion
-                    # Handle optional fields if they come as unexpected types, e.g., quantity, unit_price
-                    if 'quantity' in item_dict and item_dict['quantity'] is not None:
-                        item_dict['quantity'] = float(item_dict['quantity'])
-                    if 'unit_price' in item_dict and item_dict['unit_price'] is not None:
-                        item_dict['unit_price'] = float(item_dict['unit_price'])
-
+                    # After recursive sanitization, total_price, quantity, unit_price are already floats or 0.0
                     processed_items.append(InvoiceItem(**item_dict))
                 except (ValueError, TypeError, KeyError) as e:
                     logger.error(f"Failed to parse item: {item_dict}. Error: {e}")
@@ -325,22 +319,15 @@ class AIInvoiceExtractor:
                     processed_items.append(InvoiceItem(
                         description=item_dict.get('description', 'Unidentified Item'),
                         total_price=0.0,
-                        warning=f"Parsing failed: {e}. Original data: {item_dict}"
+                        warning=f"Parsing failed: {e}. Original data: {str(item_dict)[:200]}..."
                     ))
             invoice_dict['items'] = processed_items # Replace with robustly parsed items
 
-            # Ensure total_amount and tax_amount are floats
-            try:
-                invoice_dict['total_amount'] = float(invoice_dict.get('total_amount', 0.0))
-            except (ValueError, TypeError) as e:
-                logger.error(f"Failed to parse total_amount: {invoice_dict.get('total_amount')}. Error: {e}")
-                invoice_dict['total_amount'] = 0.0
-
-            try:
-                invoice_dict['tax_amount'] = float(invoice_dict.get('tax_amount', 0.0))
-            except (ValueError, TypeError) as e:
-                logger.error(f"Failed to parse tax_amount: {invoice_dict.get('tax_amount')}. Error: {e}")
-                invoice_dict['tax_amount'] = 0.0
+            # After recursive sanitization, total_amount and tax_amount are already floats or 0.0
+            # No need for explicit float() cast or try-except here as _sanitize_numerical_field handles it.
+            # We can directly assign them if they exist, otherwise default to 0.0
+            invoice_dict['total_amount'] = invoice_dict.get('total_amount', 0.0)
+            invoice_dict['tax_amount'] = invoice_dict.get('tax_amount', 0.0)
             
             try:
                 structured_data = InvoiceData(**invoice_dict)
