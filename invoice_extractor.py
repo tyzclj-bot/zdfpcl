@@ -13,11 +13,11 @@ def clean_price(price_input):
     
     # 使用正则只保留数字和小数点
     # 这一步会把 "2.48 // error" 变成 "2.48"
-    cleaned = re.sub(r'[^\d\.]', '', price_str)
+    cleaned = re.sub(r'[^\d.]', '', price_str)
     
     try:
         # 尝试寻找第一个浮点数
-        match = re.search(r"(\d+\.\d+)", cleaned)
+        match = re.search(r"(\d+\.?\d*|\.?\d+)", cleaned)
         if match:
             return float(match.group(1))
         return float(cleaned)
@@ -25,6 +25,7 @@ def clean_price(price_input):
         return 0.0
 
 
+import re
 import json
 import logging
 from typing import List, Optional, Tuple, Any
