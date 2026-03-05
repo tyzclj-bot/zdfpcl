@@ -326,7 +326,7 @@ class AIInvoiceExtractor:
                     # After recursive sanitization, total_price, quantity, unit_price are already floats or 0.0
                     processed_items.append(InvoiceItem(**item_dict))
                 except (ValueError, TypeError, KeyError) as e:
-                    logger.error(f"Failed to parse item: {item_dict}. Error: {e}")
+                    logger.error(f"Failed to parse item: {json.dumps(item_dict, ensure_ascii=False)}. Error: {e}")
                     # Mark as "Unidentified Item" and ensure total_price is 0.0
                     processed_items.append(InvoiceItem(
                         description=item_dict.get('description', 'Unidentified Item'),
