@@ -1,11 +1,13 @@
 import os
 import subprocess
 import sys
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+
 
 def create_mock_pdf(file_path):
     """Generate a mock invoice PDF for testing"""
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+
     c = canvas.Canvas(file_path, pagesize=letter)
     c.setFont("Helvetica-Bold", 16)
     c.drawString(100, 750, "MOCK INVOICE")
