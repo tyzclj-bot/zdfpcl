@@ -12,7 +12,7 @@ load_dotenv()
 
 from invoice_extractor import AIInvoiceExtractor
 from quickbooks_adapter import QuickBooksAdapter
-from supabase_manager import SupabaseManager
+# from supabase_manager import SupabaseManager # Temporarily disabled for debugging
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
 
@@ -291,21 +291,53 @@ else:
         with st.sidebar:
             st.info("We are currently in private beta for direct sync. Please contact support to join.")
 
+
 def init_supabase():
-    """Initialize Supabase Client from Env or Session State"""
-    # Check if keys are in env
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
-    
-    # Or check if they were entered in UI
-    if not url and 'supabase_url' in st.session_state:
-        url = st.session_state.supabase_url
-    if not key and 'supabase_key' in st.session_state:
-        key = st.session_state.supabase_key
-        
-    if url and key:
-        return SupabaseManager(url, key)
+    """Temporarily disabled Supabase connection for debugging startup issues."""
+    print("SupabaseManager initialization temporarily bypassed.") # Debug print
     return None
+
+# --- Mocking for Debugging ---
+# Mock a logged-in user to bypass auth logic during testing
+class MockUser:
+    email = "mock_user@example.com"
+    id = "mock_user_id"
+    # Add any other attributes that st.session_state.user might need
+    user_metadata = {"name": "Mock User"}
+
+# Mock AuthManager if it's imported later and causes issues
+class MockAuthManager:
+    def __init__(self, supabase_manager):
+        print("MockAuthManager initialized.")
+        pass # Do nothing
+    def get_google_oauth_provider_redirect(self, redirect_url):
+        return "http://mock-google-auth-url.com"
+    def sign_in_with_oauth(self, code, verifier):
+        # Simulate a successful login
+        class MockSession:
+            access_token = "mock_access_token"
+        return type('obj', (object,), {'user': MockUser(), 'session': MockSession()})
+    def sign_out(self):
+        print("Mock sign out called.")
+        pass
+
+# Temporarily comment out the original init_supabase function
+# def init_supabase():
+#     """Initialize Supabase Client from Env or Session State"""
+#     # Check if keys are in env
+#     url = os.getenv("SUPABASE_URL")
+#     key = os.getenv("SUPABASE_KEY")
+#     
+#     # Or check if they were entered in UI
+#     if not url and 'supabase_url' in st.session_state:
+#         url = st.session_state.supabase_url
+#     if not key and 'supabase_key' in st.session_state:
+#         key = st.session_state.supabase_key
+#         
+#     if url and key:
+#         return SupabaseManager(url, key)
+#     return None
+
 
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 
@@ -483,119 +515,37 @@ def main():
     # --- Promotional Banner (Removed, replaced by Header) ---
     # st.markdown(""" ... """)
 
-    # --- Session State Init ---
+    # --- Session State Init (MOCKED FOR DEBUGGING) ---
     if 'user' not in st.session_state:
-        st.session_state.user = None
+        st.session_state.user = MockUser() # Temporarily mock user
     if 'access_token' not in st.session_state:
-        st.session_state.access_token = None
+        st.session_state.access_token = MockAuthManager(None).sign_in_with_oauth(None, None).session.access_token # Temporarily mock token
     if 'credits' not in st.session_state:
-        st.session_state.credits = 0
+        st.session_state.credits = 100 # Temporarily give some credits
 
     # --- Sidebar: Auth & Settings ---
     with st.sidebar:
         st.header("Authorization")
         
-        supabase = init_supabase()
+        supabase = init_supabase() # This now returns None
         
-        if not supabase:
-            st.warning("Please configure Supabase credentials.")
-            st.session_state.supabase_url = st.text_input("Supabase URL", placeholder="https://xyz.supabase.co")
-            st.session_state.supabase_key = st.text_input("Supabase Anon Key", type="password")
-            if st.button("Save Settings"):
-                st.rerun()
-        else:
-            # --- DEBUG SECTION ---
-            # Remove this in production once fixed
-            # with st.expander("🔧 Connection Debugger", expanded=True):
-            #     st.write("Current URL Parameters:")
-            #     st.json(dict(st.query_params))
-            #     
-            #     if 'code' in st.query_params:
-            #         st.success("✅ Auth Code Detected!")
-            #     else:
-            #         st.info("ℹ️ No Auth Code in URL")
-            #         
-            #     if 'error' in st.query_params:
-            #         st.error(f"⚠️ Provider Error: {st.query_params.get('error')}")
-            #         st.error(f"Description: {st.query_params.get('error_description')}")
+        if not supabase: # This condition will now always be true
+            st.success("Supabase connection temporarily disabled for debugging.")
+            # Optionally display mock credentials, but not for user input
+            st.write("Mock Supabase URL: http://mock.supabase.co")
+            st.write("Mock Supabase Anon Key: mock_key")
 
-            # Handle OAuth Callback (Check if returning from Google)
-            # Use query_params directly which is more robust in newer Streamlit versions
-            if 'code' in st.query_params:
-                # --- FIX: Handle Browser Back Button ---
-                # If user is already logged in, ignore the code (it might be old/used)
-                # and just clean the URL to prevent "Invalid Grant" errors or UI stutter.
-                if st.session_state.user is not None:
-                    st.query_params.clear()
-                    st.rerun()
-
-                code = st.query_params['code']
-                
-                # Attempt to retrieve verifier from state (Stateless) or Session (Stateful)
-                verifier = None
-                
-                # 1. Try State (Simplified: State IS the verifier)
-                if 'state' in st.query_params:
-                    verifier = st.query_params['state']
-                
-                # 2. Fallback to Session State
-                if not verifier:
-                    verifier = st.session_state.get('oauth_verifier')
-
-                # 3. Fallback to Fixed Verifier (Production Stability)
-                if not verifier:
-                    verifier = FIXED_VERIFIER
-                
-                if verifier:
-                    try:
-                        with st.spinner("Logging in with Google..."):
-                            res = supabase.exchange_code_for_session(code, verifier)
-                            if res and res.user:
-                                st.session_state.user = res.user
-                                st.session_state.access_token = res.session.access_token
-                                
-                                # Clean up - CRITICAL: Clear query params to prevent loop
-                                st.query_params.clear()
-                                # del st.session_state.oauth_verifier
-                                
-                                st.success("Logged in with Google successfully!")
-                                
-                                # Auto-redirect
-                                time.sleep(0.5) 
-                                st.rerun()
-                    except Exception as e:
-                        # Improved Error Logging
-                        st.error(f"Google Login failed: {str(e)}")
-                        # Debug info for the user to help troubleshoot
-                        with st.expander("Troubleshooting Info"):
-                            st.write(f"Verifier present: {bool(verifier)}")
-                            st.write(f"Code present: {bool(code)}")
-                            if hasattr(e, 'response'):
-                                st.write(f"Response: {e.response.text}")
-                                
-                        # Clear params to avoid loop even on error
-                        st.query_params.clear()
-                        # Optional: Wait a bit so user sees the error
-                        time.sleep(5) # Increase wait time to read error
-                        st.rerun()
-                else:
-                    # Case: We have a code but no verifier. 
-                    # This happens if session state was lost (e.g. cross-device or browser privacy settings)
-                    # Or simply a refresh on the callback URL.
-                    st.warning("Session expired or invalid. Please try logging in again.")
-                    # Debug Info
-                    with st.expander("Debug Details"):
-                        st.write("Reason: OAuth Verifier missing from session and state.")
-                        st.write("Please ensure cookies are enabled and you are not in Incognito mode causing state loss.")
-                    
-                    st.query_params.clear()
-                    if st.button("Retry Login"):
-                        st.rerun()
-            
-            # If User is Logged In
-            # FORCE RE-CHECK of Session State if needed
+            # Provide a mock logout button
             if st.session_state.user:
-                # Display Avatar if available
+                if st.button("Logout (Mock)"):
+                    st.session_state.user = None
+                    st.session_state.access_token = None
+                    st.session_state.credits = 0
+                    st.rerun()
+        else:
+            # This block is for actual Supabase interaction, which is disabled.
+            # We can either comment it out or add a placeholder.
+            st.info("Actual Supabase login logic is bypassed for debugging.")                # Display Avatar if available
                 user_meta = getattr(st.session_state.user, 'user_metadata', {})
                 
                 # Google often uses 'picture' instead of 'avatar_url'
