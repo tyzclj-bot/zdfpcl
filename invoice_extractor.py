@@ -523,64 +523,8 @@ class AIInvoiceExtractor:
 
     def extract_from_image(self, image_bytes: bytes) -> dict:
         """
-        Use EasyOCR to extract text from images, then send to DeepSeek for structuring.
+        Temporarily disabled: Image recognition functionality. Returning placeholder.
         """
-        import easyocr
-        import numpy as np
-        import cv2
-
-        logger.info("Starting OCR processing for image...")
-
-
-        try:
-            # 1. Convert image bytes to OpenCV format
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
-            if img is None:
-                return {"error": "Unable to decode image file"}
-
-            # 2. Pre-processing for Receipt OCR (Upscaling + Contrast)
-            # Strategy: Upscale image to make decimal points larger and clearer.
-            # Binarization is removed as it was causing data loss (garbled text).
-            
-            # Upscale (2x or 3x) to separate dots from numbers
-            # Use Cubic interpolation for better text quality
-            scale_factor = 2.0
-            if img.shape[1] < 2000: # Only upscale if not already huge
-                img = cv2.resize(img, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
-
-            # Convert to grayscale
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            
-            # Contrast Enhancement (CLAHE)
-            # Makes text darker and background lighter without the harshness of thresholding
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            processed_img = clahe.apply(gray)
-            
-            # 3. Initialize EasyOCR (Supports Chinese and English)
-            # Note: First run will download model, may take some time
-            reader = easyocr.Reader(['ch_sim', 'en'], gpu=False) 
-            
-            # 4. Extract text from PROCESSED image with detail=1 for bounding boxes
-            ocr_results_with_boxes = reader.readtext(processed_img, detail=1)
-            
-            # New Step: Pre-process OCR text to merge weighted item lines
-            preprocessed_text = self._merge_weighted_item_lines(ocr_results_with_boxes)
-            
-            logger.info(f"OCR extracted and preprocessed {len(preprocessed_text)} characters.")
-            
-            if not preprocessed_text.strip():
-                return {"error": "OCR failed to identify any text from the image, or pre-processing resulted in empty content."}
-
-            # 5. Send to DeepSeek for structuring
-            structured_data = self.parse_with_ai(preprocessed_text, ocr_results_with_boxes=ocr_results_with_boxes)
-            
-            # Return both structured data and raw text for debugging
-            result_dict = structured_data.model_dump()
-            result_dict["_raw_text"] = preprocessed_text
-            return result_dict
-
-        except Exception as e:
-            logger.error(f"OCR processing failed: {e}")
-            return {"error": f"Image recognition failed: {str(e)}"}
+        self.logger.info("Image recognition functionality is temporarily disabled.")
+        return {"error": "Image recognition is temporarily disabled due to environment issues. Please use PDF for now."
+               }
