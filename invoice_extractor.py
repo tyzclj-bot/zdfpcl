@@ -139,6 +139,41 @@ class AIInvoiceExtractor:
         return "\n".join(final_processed_lines)
 
 
+    def _sanitize_numerical_field(self, value: Any) -> Any:
+        """Strips // comments from a string that should be a number."""
+        if isinstance(value, str):
+            # Regex to find a potential number (integer or float) at the beginning
+            # followed by optional spaces and then `//` and anything after it.
+            # We want to capture only the numerical part.
+            match = re.match(r'\s*(\d+\.?\d*)\s*//.*', value)
+            if match:
+                return match.group(1).strip()
+            # If no // comment, but it's a string that should be a number, try to convert
+            try:
+                # If it can be converted to float, it's a valid number string
+                float(value)
+                return value
+            except ValueError:
+                # If it's a string that cannot be converted to float,
+                # and no // comment was found, return original (let Pydantic handle it)
+                pass
+        return value
+
+    def _recursive_sanitize_numerical_fields(self, data: Any) -> Any:
+        """Recursively sanitizes numerical fields in a dict or list."""
+        if isinstance(data, dict):
+            new_dict = {}
+            for k, v in data.items():
+                if k in ["total_price", "quantity", "unit_price", "total_amount", "tax_amount"]:
+                    new_dict[k] = self._sanitize_numerical_field(v)
+                else:
+                    new_dict[k] = self._recursive_sanitize_numerical_fields(v)
+            return new_dict
+        elif isinstance(data, list):
+            return [self._recursive_sanitize_numerical_fields(item) for item in data]
+        else:
+            return data
+
     def parse_with_ai(self, text: str, ocr_results_with_boxes: List, retry_count: int = 0, feedback_message: Optional[str] = None) -> InvoiceData:
         """Use DeepSeek to convert unstructured text to structured JSON, with retry mechanism and feedback."""
         
@@ -254,7 +289,21 @@ class AIInvoiceExtractor:
             content = response_json['choices'][0]['message']['content']
             content = content.replace("```json", "").replace("```", "").strip()
             
-            invoice_dict = json.loads(content)
+            try:
+                invoice_dict = json.loads(content)
+            except json.JSONDecodeError as json_e:
+                logger.error(f"Failed to parse AI response JSON: {json_e}. Raw content: {content}")
+                # Attempt to recover by returning a default InvoiceData
+                return InvoiceData(
+                    vendor_name="Unknown",
+                    total_amount=0.0,
+                    tax_amount=0.0,
+                    currency="USD",
+                    warning=f"AI response JSON was malformed: {json_e}. Raw: {content[:200]}..."
+                )
+
+            # --- Sanitize numerical fields from potential AI comments --- 
+            invoice_dict = self._recursive_sanitize_numerical_fields(invoice_dict)
             
             # --- Robust Item Parsing with Try-Except (Enhance Fault Tolerance) ---
             processed_items = []
