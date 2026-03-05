@@ -172,8 +172,8 @@ class AIInvoiceExtractor:
         3.61 N
         ---
         
-        **CRITICAL INSTRUCTION for "lb @" lines:**
-        When you encounter a line with "lb @" (e.g., "2.51 lb @ 1.44 /lb"), all numbers on THIS SPECIFIC LINE (e.g., 2.51, 1.44) are **DESCRIPTION/QUANTITY/UNIT PRICE information ONLY**. They **MUST ABSOLUTELY NOT** be extracted as the `total_price` for the item. The true `total_price` for this weighted item WILL ALWAYS be on the **NEXT LINE** (e.g., "3.61 N").
+        **CRITICAL INSTRUCTION for 'lb @' lines:**
+        When you encounter a line with "lb @" (e.g., "2.51 lb @ 1.44 /lb"), all numbers on THIS SPECIFIC LINE (e.g., 2.51, 1.44) are **DESCRIPTION/QUANTITY/UNIT PRICE information ONLY**. They **MUST ABSOLUTELY NOT** be extracted as the `total_price` for the item. The true `total_price` for this weighted item WILL ALWAYS be on the **NEXT LINE** (e.g., "3.61 N"). For these weighted item patterns, you MUST focus solely on extracting the final `total_price` from the next line, completely ignoring the weight and unit price from the "lb @" line when determining the item's total cost. Do NOT attempt to extract `quantity` or `unit_price` for such items; focus entirely on the `description` and the final `total_price`.
         
         **Bad Example of your previous extraction logic (AVOID THIS AT ALL COSTS - THIS IS WRONG):**
         ```json
@@ -194,9 +194,7 @@ class AIInvoiceExtractor:
         [
           {
             "description": "RED GRAPE",
-            "quantity": 2.51,
-            "unit_price": 1.44,
-            "total_price": 3.61 // CORRECT - This is the final calculated price for the item, identified from the next line with 'N' or 'X' suffix.
+            "total_price": 3.61 // CORRECT - This is the final calculated price for the item, identified from the next line with 'N' or 'X' suffix. No quantity or unit_price are extracted for weighted items.
           }
         ]
         ```
@@ -256,6 +254,44 @@ class AIInvoiceExtractor:
             content = content.replace("```json", "").replace("```", "").strip()
             
             invoice_dict = json.loads(content)
+            
+            # --- Robust Item Parsing with Try-Except (Enhance Fault Tolerance) ---
+            processed_items = []
+            original_items = invoice_dict.get('items', [])
+            for item_dict in original_items:
+                try:
+                    # Attempt to parse item, ensuring total_price is a float
+                    item_dict['total_price'] = float(item_dict['total_price']) # Ensure type conversion
+                    # Handle optional fields if they come as unexpected types, e.g., quantity, unit_price
+                    if 'quantity' in item_dict and item_dict['quantity'] is not None:
+                        item_dict['quantity'] = float(item_dict['quantity'])
+                    if 'unit_price' in item_dict and item_dict['unit_price'] is not None:
+                        item_dict['unit_price'] = float(item_dict['unit_price'])
+
+                    processed_items.append(InvoiceItem(**item_dict))
+                except (ValueError, TypeError, KeyError) as e:
+                    logger.error(f"Failed to parse item: {item_dict}. Error: {e}")
+                    # Mark as "Unidentified Item" and ensure total_price is 0.0
+                    processed_items.append(InvoiceItem(
+                        description=item_dict.get('description', 'Unidentified Item'),
+                        total_price=0.0,
+                        warning=f"Parsing failed: {e}. Original data: {item_dict}"
+                    ))
+            invoice_dict['items'] = processed_items # Replace with robustly parsed items
+
+            # Ensure total_amount and tax_amount are floats
+            try:
+                invoice_dict['total_amount'] = float(invoice_dict.get('total_amount', 0.0))
+            except (ValueError, TypeError) as e:
+                logger.error(f"Failed to parse total_amount: {invoice_dict.get('total_amount')}. Error: {e}")
+                invoice_dict['total_amount'] = 0.0
+
+            try:
+                invoice_dict['tax_amount'] = float(invoice_dict.get('tax_amount', 0.0))
+            except (ValueError, TypeError) as e:
+                logger.error(f"Failed to parse tax_amount: {invoice_dict.get('tax_amount')}. Error: {e}")
+                invoice_dict['tax_amount'] = 0.0
+            
             structured_data = InvoiceData(**invoice_dict)
 
             # --- NEW POST-PROCESSING LOGIC (Priority over Math Audit) ---
