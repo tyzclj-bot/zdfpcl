@@ -1,7 +1,7 @@
 import pdfplumber
 import json
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 from pydantic import BaseModel, Field
 import config
 import os
