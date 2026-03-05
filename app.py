@@ -12,7 +12,7 @@ load_dotenv()
 
 from invoice_extractor import AIInvoiceExtractor
 from quickbooks_adapter import QuickBooksAdapter
-# from supabase_manager import SupabaseManager # Temporarily disabled for debugging
+from supabase_manager import SupabaseManager
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
 
@@ -293,50 +293,20 @@ else:
 
 
 def init_supabase():
-    """Temporarily disabled Supabase connection for debugging startup issues."""
-    print("SupabaseManager initialization temporarily bypassed.") # Debug print
+    """Initialize Supabase Client from Env or Session State"""
+    # Check if keys are in env
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+    
+    # Or check if they were entered in UI
+    if not url and 'supabase_url' in st.session_state:
+        url = st.session_state.supabase_url
+    if not key and 'supabase_key' in st.session_state:
+        key = st.session_state.supabase_key
+        
+    if url and key:
+        return SupabaseManager(url, key)
     return None
-
-# --- Mocking for Debugging ---
-# Mock a logged-in user to bypass auth logic during testing
-class MockUser:
-    email = "mock_user@example.com"
-    id = "mock_user_id"
-    # Add any other attributes that st.session_state.user might need
-    user_metadata = {"name": "Mock User"}
-
-# Mock AuthManager if it's imported later and causes issues
-class MockAuthManager:
-    def __init__(self, supabase_manager):
-        print("MockAuthManager initialized.")
-        pass # Do nothing
-    def get_google_oauth_provider_redirect(self, redirect_url):
-        return "http://mock-google-auth-url.com"
-    def sign_in_with_oauth(self, code, verifier):
-        # Simulate a successful login
-        class MockSession:
-            access_token = "mock_access_token"
-        return type('obj', (object,), {'user': MockUser(), 'session': MockSession()})
-    def sign_out(self):
-        print("Mock sign out called.")
-        pass
-
-# Temporarily comment out the original init_supabase function
-# def init_supabase():
-#     """Initialize Supabase Client from Env or Session State"""
-#     # Check if keys are in env
-#     url = os.getenv("SUPABASE_URL")
-#     key = os.getenv("SUPABASE_KEY")
-#     
-#     # Or check if they were entered in UI
-#     if not url and 'supabase_url' in st.session_state:
-#         url = st.session_state.supabase_url
-#     if not key and 'supabase_key' in st.session_state:
-#         key = st.session_state.supabase_key
-#         
-#     if url and key:
-#         return SupabaseManager(url, key)
-#     return None
 
 
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
@@ -515,37 +485,66 @@ def main():
     # --- Promotional Banner (Removed, replaced by Header) ---
     # st.markdown(""" ... """)
 
-    # --- Session State Init (MOCKED FOR DEBUGGING) ---
+    # --- Session State Init ---
+    if 'login_pending' not in st.session_state:
+        st.session_state.login_pending = False
+    if 'verifier' not in st.session_state:
+        st.session_state.verifier = FIXED_VERIFIER # For PKCE flow
     if 'user' not in st.session_state:
-        st.session_state.user = MockUser() # Temporarily mock user
+        st.session_state.user = None
     if 'access_token' not in st.session_state:
-        st.session_state.access_token = MockAuthManager(None).sign_in_with_oauth(None, None).session.access_token # Temporarily mock token
+        st.session_state.access_token = None
     if 'credits' not in st.session_state:
-        st.session_state.credits = 100 # Temporarily give some credits
+        st.session_state.credits = 0 # Default credits
+    if 'auth_manager' not in st.session_state:
+        st.session_state.auth_manager = None
+    if 'supabase_url' not in st.session_state:
+        st.session_state.supabase_url = os.getenv("SUPABASE_URL")
+    if 'supabase_key' not in st.session_state:
+        st.session_state.supabase_key = os.getenv("SUPABASE_KEY")
 
     # --- Sidebar: Auth & Settings ---
     with st.sidebar:
         st.header("Authorization")
         
-        supabase = init_supabase() # This now returns None
+        supabase = init_supabase()
         
-        if not supabase: # This condition will now always be true
-            st.success("Supabase connection temporarily disabled for debugging.")
-            # Optionally display mock credentials, but not for user input
-            st.write("Mock Supabase URL: http://mock.supabase.co")
-            st.write("Mock Supabase Anon Key: mock_key")
+        if supabase:
+            # --- Handle Google OAuth Callback ---
+            if "code" in st.query_params and not st.session_state.login_pending:
+                st.session_state.login_pending = True # Prevent re-entry
+                code = st.query_params["code"]
+                try:
+                    with st.spinner("Logging in..."):
+                        if 'auth_manager' not in st.session_state or st.session_state.auth_manager is None:
+                            from auth_manager import AuthManager # Lazy import
+                            st.session_state.auth_manager = AuthManager(supabase)
 
-            # Provide a mock logout button
+                        session_data = st.session_state.auth_manager.sign_in_with_oauth(code, st.session_state.verifier)
+                        if session_data and session_data.user:
+                            st.session_state.user = session_data.user
+                            st.session_state.access_token = session_data.session.access_token
+                            # Initialize credits if new user or not set
+                            profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
+                            if profile and "credits" in profile:
+                                st.session_state.credits = profile["credits"]
+                            else:
+                                supabase.create_user_profile(st.session_state.user.id, st.session_state.access_token, st.session_state.user.email)
+                                st.session_state.credits = 10 # Default new user credits
+                            st.toast("Logged in successfully!", icon="🎉")
+                            st.rerun() # Clear URL params and refresh
+                        else:
+                            st.error("Login failed. Please try again.")
+                            st.session_state.login_pending = False
+                except Exception as e:
+                    st.error(f"An error occurred during login: {e}")
+                    st.session_state.login_pending = False
+                    st.toast("Login failed due to an error.", icon="😢")
+                st.query_params.clear() # Clear code and state from URL
+            
+            # --- Login/Logout UI ---
             if st.session_state.user:
-                if st.button("Logout (Mock)"):
-                    st.session_state.user = None
-                    st.session_state.access_token = None
-                    st.session_state.credits = 0
-                    st.rerun()
-        else:
-            # This block is for actual Supabase interaction, which is disabled.
-            # We can either comment it out or add a placeholder.
-            st.info("Actual Supabase login logic is bypassed for debugging.")                # Display Avatar if available
+                # Display Avatar if available
                 user_meta = getattr(st.session_state.user, 'user_metadata', {})
                 
                 # Google often uses 'picture' instead of 'avatar_url'
@@ -580,7 +579,7 @@ def main():
                     else:
                          st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
 
-                if st.session_state.credits <= 0:
+                if st.session_state.credits <= 0 and plan_status != 'pro':
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
                     # Lemon Squeezy Checkout URL
                     checkout_url = "https://quickbills-ai.lemonsqueezy.com"
@@ -590,7 +589,60 @@ def main():
                 if plan_status != 'pro':
                     # Lemon Squeezy Checkout URL
                     checkout_url = "https://quickbills-ai.lemonsqueezy.com"
-                    st.link_button("💎 Get Pro - $19.99/mo", checkout_url, type="secondary", use_container_width=True)
+                    st.link_button("✨ Get Pro Plan ($19.99/month)", checkout_url, type="secondary", use_container_width=True)
+                
+                # Logout Button
+                if st.button("Logout", type="secondary", use_container_width=True):
+                    if st.session_state.auth_manager:
+                        st.session_state.auth_manager.sign_out()
+                    st.session_state.user = None
+                    st.session_state.access_token = None
+                    st.session_state.credits = 0
+                    st.toast("Logged out.", icon="👋")
+                    st.rerun()
+            else:
+                # User not logged in
+                st.info("Log in to unlock all features and process invoices.")
+                
+                # Input fields for Supabase URL and Key
+                with st.expander("Configure Supabase (Optional)", expanded=False):
+                    st.session_state.supabase_url = st.text_input(
+                        "Supabase URL",
+                        value=os.getenv("SUPABASE_URL", ""),
+                        key="ui_supabase_url",
+                        placeholder="e.g., https://xyzcompany.supabase.co"
+                    )
+                    st.session_state.supabase_key = st.text_input(
+                        "Supabase Anon Key",
+                        value=os.getenv("SUPABASE_KEY", ""),
+                        key="ui_supabase_key",
+                        placeholder="Your Supabase Anon Key"
+                    )
+                    if st.session_state.supabase_url and st.session_state.supabase_key:
+                        st.success("Supabase configured. Please log in.")
+                    else:
+                        st.warning("Please enter Supabase credentials to enable login.")
+
+                if st.session_state.supabase_url and st.session_state.supabase_key:
+                    # Initialize AuthManager only if credentials are provided
+                    from auth_manager import AuthManager # Lazy import
+                    st.session_state.auth_manager = AuthManager(supabase)
+                    
+                    # Google OAuth Login Button
+                    google_login_url = st.session_state.auth_manager.get_google_oauth_provider_redirect(
+                        redirect_url=f"{config.SUPABASE_REDIRECT_URL}?state={st.session_state.verifier}"
+                    )
+                    st.link_button("Login with Google", url=google_login_url, type="primary", use_container_width=True)
+                else:
+                    st.error("Supabase credentials missing. Cannot log in.")
+        else:
+            st.error("Supabase client failed to initialize. Check environment variables.")
+
+        st.markdown("---")
+        st.caption(f"App Version: {os.getenv('APP_VERSION', '1.0.0')}")
+        st.caption(f"Team Location: Hong Kong / Taiwan")
+        st.markdown("[Privacy Policy](?nav=privacy)", unsafe_allow_html=True)
+        st.markdown("[Terms of Service](?nav=terms)", unsafe_allow_html=True)                    st.link_button("💎 Get Pro - $19.99/mo", checkout_url, type="secondary", use_container_width=True)
                     st.markdown("""
                         <div class="secure-badge">
                             <span>🔒 Secured by Lemon Squeezy</span>

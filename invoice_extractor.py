@@ -191,7 +191,7 @@ class AIInvoiceExtractor:
         elif isinstance(data, list):
             return [self._recursive_sanitize_numerical_fields(item) for item in data]
         else:
-            return data # For non-dict, non-list values, return as is (e.g., descriptions)
+            return data # For non-dict, non-list, non-numerical-string values, return as is (e.g., descriptions, vendor_name)
 
     def parse_with_ai(self, text: str, ocr_results_with_boxes: List, retry_count: int = 0, feedback_message: Optional[str] = None) -> InvoiceData:
         """Use DeepSeek to convert unstructured text to structured JSON, with retry mechanism and feedback."""
@@ -232,24 +232,24 @@ class AIInvoiceExtractor:
         **Bad Example of your previous extraction logic (AVOID THIS AT ALL COSTS - THIS IS WRONG):**
         ```json
         [
-          {
+          {{
             "description": "RED GRAPE",
-            "total_price": 2.48 // INCORRECT - This was another item's price, or part of the weight was taken as price
-          },
-          {
+            "total_price": 2.48 // INCORRECT - This was another item\'s price, or part of the weight was taken as price
+          }},
+          {{
             "description": "1lb/1.44", // INCORRECT - This is part of the weight/unit info
             "total_price": 2.51 // INCORRECT - This is the weight, NOT the final price.
-          }
+          }}
         ]
         ```
         
         **Correct Example of desired extraction logic (FOLLOW THIS PRECISELY):**
         ```json
         [
-          {
+          {{
             "description": "RED GRAPE",
-            "total_price": 3.61 // CORRECT - This is the final calculated price for the item, identified from the next line with 'N' or 'X' suffix. No quantity or unit_price are extracted for weighted items.
-          }
+            "total_price": 3.61 // CORRECT - This is the final calculated price for the item, identified from the next line with \'N\' or \'X\' suffix. No quantity or unit_price are extracted for weighted items.
+          }}
         ]
         ```
         

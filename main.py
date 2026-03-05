@@ -63,6 +63,8 @@ def main():
 
     except Exception as e:
         logger.error(f"Error occurred during processing: {e}")
+        import traceback
+        traceback.print_exc() # Print full traceback for debugging
 
 if __name__ == "__main__":
     main()
