@@ -1,4 +1,3 @@
-import pdfplumber
 import re
 
 def clean_price(price_input):
