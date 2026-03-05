@@ -1,4 +1,31 @@
 import pdfplumber
+import re
+
+def clean_price(price_input):
+    """
+    强制清洗价格：移除所有非数字和小数点的字符。
+    如果清洗失败，返回 0.0。绝不报错。
+    """
+    if not price_input:
+        return 0.0
+    
+    # 将输入转为字符串
+    price_str = str(price_input)
+    
+    # 使用正则只保留数字和小数点
+    # 这一步会把 "2.48 // error" 变成 "2.48"
+    cleaned = re.sub(r'[^\d\.]', '', price_str)
+    
+    try:
+        # 尝试寻找第一个浮点数
+        match = re.search(r"(\d+\.\d+)", cleaned)
+        if match:
+            return float(match.group(1))
+        return float(cleaned)
+    except:
+        return 0.0
+
+
 import json
 import logging
 from typing import List, Optional, Tuple, Any
@@ -141,24 +168,9 @@ class AIInvoiceExtractor:
 
     def _sanitize_numerical_field(self, value: Any) -> float:
         """
-        Extracts a pure number from a string, or converts existing numbers to float.
-        If extraction/conversion fails, returns 0.0.
+        Delegates to the global clean_price function for robust numerical cleaning.
         """
-        if isinstance(value, (int, float)):
-            return float(value) # Already a number, ensure float type
-
-        if isinstance(value, str):
-            # Use re.search to find the first sequence of digits and optional decimal point.
-            # This is robust to comments (e.g., "2.48 // check") or suffixes (e.g., "3.61 N").
-            match = re.search(r'\d+\.?\d*', value)
-            if match:
-                numerical_str = match.group(0) # Get the matched numerical part
-                try:
-                    return float(numerical_str)
-                except ValueError:
-                    pass # Fall through to return 0.0
-
-        return 0.0 # Default for all other cases (non-string, non-numeric, or failed extraction/conversion)
+        return clean_price(value)
 
     def _recursive_sanitize_numerical_fields(self, data: Any) -> Any:
         """Recursively sanitizes numerical fields in a dict or list."""
