@@ -662,7 +662,7 @@ def main():
                     st.markdown(html_button, unsafe_allow_html=True)
                     st.markdown("""
                         <div class="secure-badge">
-                            <span>🔒 Secured by Lemon Squeezy</span>
+                            <span>🔒 Secured by Gumroad</span>
                         </div>
                     """, unsafe_allow_html=True)
 
@@ -806,7 +806,7 @@ def main():
                 st.markdown(html_button, unsafe_allow_html=True)
                 st.markdown("""
                     <div class="secure-badge">
-                        <span>🔒 Secured by Lemon Squeezy</span>
+                        <span>🔒 Secured by Gumroad</span>
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -1010,7 +1010,7 @@ def main():
                             <span style="color: #10b981; margin-right: 0.75rem;">✔</span> 24/7 Priority Support
                         </li>
                     </ul>
-                    <a href="https://quickbills-ai.lemonsqueezy.com" target="_blank" style="
+                    <a href="https://tyzclj.gumroad.com/l/quickbills" target="_blank" style="
                         display: block;
                         background: #3b82f6;
                         color: white;
@@ -1023,7 +1023,7 @@ def main():
                         transition: all 0.2s;
                     ">Subscribe Now</a>
                     <p style="margin-top: 1.25rem; font-size: 0.9rem; color: #94a3b8;">
-                        🔒 Secure checkout via Lemon Squeezy
+                        🔒 Secure checkout via Gumroad
                     </p>
                 </div>
             </div>
