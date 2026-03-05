@@ -32,6 +32,7 @@ from pydantic import BaseModel, Field
 import config
 import os
 import requests
+import pdfplumber # Added to fix NameError
 import math # Added for floating point comparisons
 
 
@@ -63,18 +64,27 @@ class AIInvoiceExtractor:
         # Empty init as we handle requests manually
         pass
 
-    def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract all text from PDF"""
-        text = ""
+    def extract_text_from_pdf(self, pdf_path: str) -> Tuple[str, List]:
+        """Extract all text from PDF along with bounding box information."""
+        full_text = ""
+        ocr_results_with_boxes = []
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 for page in pdf.pages:
                     page_text = page.extract_text()
                     if page_text:
-                        text += page_text + "\n"
-            return text
+                        full_text += page_text + "\n"
+                    
+                    # Extract words with bounding boxes
+                    words = page.extract_words()
+                    for word in words:
+                        # pdfplumber word format: {'text': '...', 'x0': ..., 'y0': ..., 'x1': ..., 'y1': ..., 'doctop': ..., 'upright': ..., 'direction': 'ltr'}
+                        # Using 'top' and 'bottom' for y-coordinates as pdfplumber provides them
+                        bbox = [word['x0'], word['top'], word['x1'], word['bottom']]
+                        ocr_results_with_boxes.append([bbox, word['text'], 1.0]) # 1.0 is a dummy probability
+            return full_text, ocr_results_with_boxes
         except Exception as e:
-            logger.error(f"Error extracting text from PDF {pdf_path}: {e}")
+            logger.error(f"Error extracting text and boxes from PDF {pdf_path}: {e}")
             raise
 
     def _find_text_bbox(self, text_to_find: str, ocr_results_with_boxes: List) -> Optional[Tuple[List[List[int]], str, float]]:
@@ -322,12 +332,12 @@ class AIInvoiceExtractor:
                     # After recursive sanitization, total_price, quantity, unit_price are already floats or 0.0
                     processed_items.append(InvoiceItem(**item_dict))
                 except (ValueError, TypeError, KeyError) as e:
-                    logger.error(f"Failed to parse item: {json.dumps(item_dict, ensure_ascii=False)}. Error: {e}")
+                    logger.error("Failed to parse item: %s. Error: %s", json.dumps(item_dict, ensure_ascii=False), e)
                     # Mark as "Unidentified Item" and ensure total_price is 0.0
                     processed_items.append(InvoiceItem(
                         description=item_dict.get('description', 'Unidentified Item'),
                         total_price=0.0,
-                        warning=f"Parsing failed: {e}. Original data: {json.dumps(item_dict, ensure_ascii=False)[:200]}..."
+                        warning="Parsing failed: {}. Original data: {}...".format(e, json.dumps(item_dict, ensure_ascii=False)[:200])
                     ))
             invoice_dict['items'] = processed_items # Replace with robustly parsed items
 
@@ -511,11 +521,12 @@ class AIInvoiceExtractor:
     def process_pdf(self, pdf_path: str) -> dict:
         """Full PDF processing flow: Extract text -> AI Parse -> Return dict"""
         logger.info(f"Processing PDF: {pdf_path}")
-        raw_text = self.extract_text_from_pdf(pdf_path)
+        raw_text, ocr_results_with_boxes = self.extract_text_from_pdf(pdf_path)
         if not raw_text.strip():
             raise ValueError("PDF text extraction resulted in empty content.")
         
-        structured_data = self.parse_with_ai(raw_text)
+        # Pass ocr_results_with_boxes to parse_with_ai
+        structured_data = self.parse_with_ai(raw_text, ocr_results_with_boxes)
         # Return both structured data and raw text for debugging
         result = structured_data.model_dump()
         result["_raw_text"] = raw_text
