@@ -633,33 +633,14 @@ def main():
                 if st.session_state.credits <= 0:
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
                     # Lemon Squeezy Checkout URL
-                    gumroad_pro_url = "https://tyzclj.gumroad.com/l/quickbills"
-                    st.link_button("🚀 Upgrade to Pro - $19.99", gumroad_pro_url, type="primary", use_container_width=True)
+                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                    st.link_button("🚀 Upgrade to Pro - $19.99", checkout_url, type="primary", use_container_width=True)
                 
                 # Upgrade/Top Up Button (Sidebar always shows if not pro)
                 if plan_status != 'pro':
                     # Lemon Squeezy Checkout URL
-                    checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
-                    html_button = f"""
-                        <a href="{checkout_url}" target="_blank" style="
-                            display: inline-flex;
-                            align-items: center;
-                            justify-content: center;
-                            background-color: #FF4B4B; /* Streamlit's default primary button color */
-                            color: white;
-                            font-weight: bold;
-                            padding: 0.75rem 1.25rem;
-                            border-radius: 0.5rem;
-                            text-decoration: none;
-                            font-size: 1rem;
-                            width: 100%;
-                            box-sizing: border-box;
-                            transition: background-color 0.2s;
-                        ">
-                            ✨ Subscribe to Pro - $19.99/mo
-                        </a>
-                    """
-                    st.markdown(html_button, unsafe_allow_html=True)
+                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                    st.link_button("💎 Get Pro - $19.99/mo", checkout_url, type="secondary", use_container_width=True)
                     st.markdown("""
                         <div class="secure-badge">
                             <span>🔒 Secured by Lemon Squeezy</span>
@@ -783,27 +764,8 @@ def main():
                 st.markdown("---")
                 st.markdown("### 💎 Go Pro")
                 st.caption("Unlock unlimited processing and 24/7 support.")
-                checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
-                html_button = f"""
-                    <a href="{checkout_url}" target="_blank" style="
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        background-color: #FF4B4B; /* Streamlit's default primary button color */
-                        color: white;
-                        font-weight: bold;
-                        padding: 0.75rem 1.25rem;
-                        border-radius: 0.5rem;
-                        text-decoration: none;
-                        font-size: 1rem;
-                        width: 100%;
-                        box-sizing: border-box;
-                        transition: background-color 0.2s;
-                    ">
-                        ✨ Subscribe to Pro - $19.99/mo
-                    </a>
-                """
-                st.markdown(html_button, unsafe_allow_html=True)
+                checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                st.link_button("Subscribe Now - $19.99", checkout_url, type="secondary", use_container_width=True)
                 st.markdown("""
                     <div class="secure-badge">
                         <span>🔒 Secured by Lemon Squeezy</span>

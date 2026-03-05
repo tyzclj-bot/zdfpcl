@@ -186,6 +186,8 @@ class AIInvoiceExtractor:
             for k, v in data.items():
                 if k in ["total_price", "quantity", "unit_price", "total_amount", "tax_amount"]:
                     new_dict[k] = self._sanitize_numerical_field(v) # This now always returns float
+                elif k == "description":
+                    new_dict[k] = str(v) if v is not None else "" # Ensure description is always a string
                 else:
                     new_dict[k] = self._recursive_sanitize_numerical_fields(v)
             return new_dict
