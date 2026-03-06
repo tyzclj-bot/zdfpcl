@@ -147,6 +147,23 @@ st.markdown("""
         transform: scale(1.02);
     }
 
+    /* Custom style for the Download CSV button */
+    [data-testid="stDownloadButton-download_csv_button"] button {
+        background-color: #ef4444; /* A nice red color */
+        color: white;
+        font-size: 1.1rem; /* Slightly larger font */
+        padding: 0.75rem 1.5rem; /* Larger padding */
+        border-radius: 0.5rem; /* Consistent border-radius */
+        border: 1px solid #dc2626; /* Darker red border */
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease-in-out;
+    }
+
+    [data-testid="stDownloadButton-download_csv_button"] button:hover {
+        background-color: #dc2626; /* Darker red on hover */
+        border-color: #b91c1c;
+    }
+
     /* Style for the main action button */
     .st-emotion-cache-19n6bn1 {
         background-image: linear-gradient(to right, #4f46e5, #7c3aed);
@@ -403,7 +420,7 @@ def show_contact_page():
     ### Email Support
     **Email:** `tyzclj@gmail.com`
     
-    **Team Location:** Mainland China (Global Support)
+    **Team Location:** Hong Kong / Taiwan (Global Support)
     
     **Response Time:** We usually respond within 24 hours.
     """)
@@ -616,17 +633,36 @@ def main():
                 if st.session_state.credits <= 0:
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
                     # Lemon Squeezy Checkout URL
-                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
-                    st.link_button("🚀 Upgrade to Pro - $19.99", checkout_url, type="primary", use_container_width=True)
+                    gumroad_pro_url = "https://tyzclj.gumroad.com/l/quickbills"
+                    st.link_button("🚀 Upgrade to Pro - $19.99", gumroad_pro_url, type="primary", use_container_width=True)
                 
                 # Upgrade/Top Up Button (Sidebar always shows if not pro)
                 if plan_status != 'pro':
                     # Lemon Squeezy Checkout URL
-                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
-                    st.link_button("💎 Get Pro - $19.99/mo", checkout_url, type="secondary", use_container_width=True)
+                    checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
+                    html_button = f"""
+                        <a href="{checkout_url}" target="_blank" style="
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            background-color: #FF4B4B; /* Streamlit's default primary button color */
+                            color: white;
+                            font-weight: bold;
+                            padding: 0.75rem 1.25rem;
+                            border-radius: 0.5rem;
+                            text-decoration: none;
+                            font-size: 1rem;
+                            width: 100%;
+                            box-sizing: border-box;
+                            transition: background-color 0.2s;
+                        ">
+                            ✨ Subscribe to Pro - $19.99/mo
+                        </a>
+                    """
+                    st.markdown(html_button, unsafe_allow_html=True)
                     st.markdown("""
                         <div class="secure-badge">
-                            <span>🔒 Secured by Lemon Squeezy</span>
+                            <span>🔒 Secured by Gumroad</span>
                         </div>
                     """, unsafe_allow_html=True)
 
@@ -747,11 +783,30 @@ def main():
                 st.markdown("---")
                 st.markdown("### 💎 Go Pro")
                 st.caption("Unlock unlimited processing and 24/7 support.")
-                checkout_url = "https://quickbills-ai.lemonsqueezy.com"
-                st.link_button("Subscribe Now - $19.99", checkout_url, type="secondary", use_container_width=True)
+                checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
+                html_button = f"""
+                    <a href="{checkout_url}" target="_blank" style="
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        background-color: #FF4B4B; /* Streamlit's default primary button color */
+                        color: white;
+                        font-weight: bold;
+                        padding: 0.75rem 1.25rem;
+                        border-radius: 0.5rem;
+                        text-decoration: none;
+                        font-size: 1rem;
+                        width: 100%;
+                        box-sizing: border-box;
+                        transition: background-color 0.2s;
+                    ">
+                        ✨ Subscribe to Pro - $19.99/mo
+                    </a>
+                """
+                st.markdown(html_button, unsafe_allow_html=True)
                 st.markdown("""
                     <div class="secure-badge">
-                        <span>🔒 Secured by Lemon Squeezy</span>
+                        <span>🔒 Secured by Gumroad</span>
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -879,7 +934,7 @@ def main():
                 border: 1px solid #e2e8f0;
             ">
                 <iframe 
-                    src="https://www.loom.com/embed/74ac71240953463ca8825d89d2898f35?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true" 
+                    src="https://www.loom.com/embed/8c9a8a8ff70a4b2b977fdb64d9c5ba38?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true" 
                     frameborder="0" 
                     webkitallowfullscreen 
                     mozallowfullscreen 
@@ -955,7 +1010,7 @@ def main():
                             <span style="color: #10b981; margin-right: 0.75rem;">✔</span> 24/7 Priority Support
                         </li>
                     </ul>
-                    <a href="https://quickbills-ai.lemonsqueezy.com" target="_blank" style="
+                    <a href="https://tyzclj.gumroad.com/l/quickbills" target="_blank" style="
                         display: block;
                         background: #3b82f6;
                         color: white;
@@ -968,7 +1023,7 @@ def main():
                         transition: all 0.2s;
                     ">Subscribe Now</a>
                     <p style="margin-top: 1.25rem; font-size: 0.9rem; color: #94a3b8;">
-                        🔒 Secure checkout via Lemon Squeezy
+                        🔒 Secure checkout via Gumroad
                     </p>
                 </div>
             </div>
@@ -1009,7 +1064,7 @@ def main():
         faq1, faq2, faq3 = st.columns(3)
         with faq1:
             st.markdown("**Is my data secure?**")
-            st.caption("Yes. We use SSL encryption and do not permanently store your files. We are a Mainland China based developer team serving global users, adhering to strict privacy standards.")
+            st.caption("Yes. We use SSL encryption and do not permanently store your files. We are a Hong Kong / Taiwan based team serving global users, adhering to strict privacy standards.")
         with faq2:
             st.markdown("**Can it handle non-standard invoices?**")
             st.caption("Absolutely. Our AI engine outperforms traditional OCR by understanding context, allowing it to accurately parse complex and non-standard layouts.")
@@ -1265,7 +1320,7 @@ def main():
 
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        if st.button("🚀 Sync to QuickBooks"):
+                        if st.button("Auto-Sync (Pro Plan Coming Soon)", disabled=True):
                             show_waitlist_modal()
                             # Fake Door Test: Replaced actual sync with waitlist modal
                             # with st.spinner("Connecting to QuickBooks Online..."):
@@ -1285,12 +1340,13 @@ def main():
                         filename = f"QuickBills_Export_{date_str}.csv"
                         
                         st.download_button(
-                            label="📥 Download QuickBooks CSV",
+                            label="Download CSV File",
                             data=csv,
                             file_name=filename,
                             mime="text/csv",
-                            type="primary",
-                            use_container_width=True
+                            type="secondary", # Changed to secondary to allow custom styling
+                            use_container_width=True,
+                            key="download_csv_button" # Added key for custom CSS targeting
                         )
 
                     with c3:
@@ -1353,7 +1409,7 @@ def main():
                 <div class="trust-col">
                     <div class="trust-icon">🛡️</div>
                     <div class="trust-title">100% Secure</div>
-                    <div class="trust-desc">No sensitive files stored. Mainland China based developer team serving global users.</div>
+                    <div class="trust-desc">No sensitive files stored. Hong Kong / Taiwan based team serving global users.</div>
                 </div>
                 <div class="trust-col">
                     <div class="trust-icon">⚡</div>
