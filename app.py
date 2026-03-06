@@ -18,26 +18,47 @@ from tempfile import NamedTemporaryFile
 
 def force_extract_dump(obj):
     """
-    暴力解包器：不管传入的是 tuple、list 还是 Pydantic 对象，
-    强行找出带有 model_dump 或 dict 方法的实例并提取数据！
+    暴力解包器：不管传入的是 tuple、list、Pydantic 对象还是 JSON 字符串，
+    强行找出带有 model_dump 或 dict 方法的实例并提取数据，或直接解析 JSON 字符串！
     """
-    # 如果是个 tuple 或 list，遍历它，把真正的数据体找出来
-    if isinstance(obj, (tuple, list)):
-        for item in obj:
-            if hasattr(item, 'model_dump'):
-                return item.model_dump()
-            elif hasattr(item, 'dict'):
-                return item.dict()
-        # 如果都没找到，强行转成字典返回
-        return {"raw_extracted_data": str(obj)}
-    
-    # 如果直接就是对象
+    # Step 1: Handle JSON string first
+    if isinstance(obj, str):
+        try:
+            # Attempt to parse as JSON
+            json_obj = json.loads(obj)
+            # If successfully parsed, recursively call to handle the parsed object
+            # This ensures that if the JSON string itself contains a Pydantic model's JSON, it's also processed
+            return force_extract_dump(json_obj)
+        except json.JSONDecodeError:
+            # Not a valid JSON string, treat as a regular string for fallback
+            pass
+
+    # Step 2: Handle Pydantic objects or dict-like objects
     if hasattr(obj, 'model_dump'):
         return obj.model_dump()
     elif hasattr(obj, 'dict'):
         return obj.dict()
     
-    # 终极兜底
+    # Step 3: Handle tuples or lists (containing Pydantic objects or dicts)
+    if isinstance(obj, (tuple, list)):
+        # We need to decide if we want to return the first valid extracted item
+        # or a list of all extracted items. Based on the previous implementation,
+        # it returned the first found. Let's maintain that behavior but improve it.
+        extracted_list_items = []
+        for item in obj:
+            extracted = force_extract_dump(item)
+            if isinstance(extracted, dict) and "fallback_data" not in extracted:
+                # If it's a valid extracted dict and not a simple fallback, add it
+                extracted_list_items.append(extracted)
+        if extracted_list_items:
+            # If we extracted valid items, return them as a list.
+            # If the original intent was to only get one, the caller needs to handle it.
+            # However, for display, a list is generally more useful.
+            return extracted_list_items
+        # If no valid items were extracted from the list/tuple, fall back
+        return {"raw_extracted_data": str(obj)}
+    
+    # Final fallback for any other object type
     return {"fallback_data": str(obj)}
 
 
