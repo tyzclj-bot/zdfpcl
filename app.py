@@ -1128,7 +1128,12 @@ def main():
                                 
                                 if "image" in uploaded_file.type:
                                     st.write("Optimizing image for OCR...")
-                                    data = extractor.extract_from_image(file_bytes)
+                                    try:
+                                        data = extractor.extract_from_image(file_bytes)
+                                    except Exception as e:
+                                        st.error(f"Image OCR Error: {e}")
+                                        status.update(label="Image Processing Failed", state="error", expanded=True)
+                                        return
                                 else: # It's a PDF
                                     st.write("Extracting raw text layer...")
                                     with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
