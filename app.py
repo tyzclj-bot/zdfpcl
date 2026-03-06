@@ -755,9 +755,15 @@ def main():
                 status.update(label="PDF Processing Failed", state="error", expanded=True)
                 return
         elif uploaded_file.type.startswith("image"):
-            st.warning("Image processing (OCR) is temporarily disabled as we prioritize text-based PDF functionality. Please upload a PDF file.")
-            status.update(label="Image Processing Disabled", state="complete", expanded=True)
-            return
+            st.info("Detected image upload. Starting OCR process...")
+            st.write("Optimizing image for OCR...")
+            try:
+                data = extractor.extract_from_image(file_bytes)
+                st.info("Image OCR processing completed.")
+            except Exception as e:
+                st.error(f"Image OCR Error: {e}\n\nFull Traceback:\n```\n{traceback.format_exc()}\n```")
+                status.update(label="Image Processing Failed", state="error", expanded=True)
+                return
 
         if data:
             status.update(label="AI processing invoice data...", state="running", expanded=True)
