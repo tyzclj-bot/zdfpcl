@@ -63,7 +63,7 @@ class InvoiceData(BaseModel):
 class AIInvoiceExtractor:
     def __init__(self):
         # Empty init as we handle requests manually
-        pass
+        self.logger = logger
 
     def extract_text_from_pdf(self, pdf_path: str) -> Tuple[str, List]:
         """Extract all text from PDF along with bounding box information."""
