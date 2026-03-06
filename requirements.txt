@@ -4,6 +4,8 @@ pydantic
 requests
 python-dotenv
 pdfplumber
+pdf2image
+Pillow
 easyocr
 opencv-python-headless
 openpyxl

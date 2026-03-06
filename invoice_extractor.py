@@ -523,10 +523,34 @@ class AIInvoiceExtractor:
 
     def process_pdf(self, pdf_path: str) -> dict:
         """Full PDF processing flow: Extract text -> AI Parse -> Return dict"""
-        logger.info(f"Processing PDF: {pdf_path}")
+        self.logger.info(f"Processing PDF: {pdf_path}")
         raw_text, ocr_results_with_boxes = self.extract_text_from_pdf(pdf_path)
+
+        # If pdfplumber extracted no text, try OCR as a fallback
         if not raw_text.strip():
-            raise ValueError("PDF text extraction resulted in empty content.")
+            self.logger.warning("PDF text extraction resulted in empty content. Attempting OCR fallback.")
+            # Render PDF to image and use extract_from_image
+            try:
+                from pdf2image import convert_from_bytes # Lazy import
+                pdf_bytes = open(pdf_path, 'rb').read()
+                pages = convert_from_bytes(pdf_bytes, first_page=1, last_page=1) # Only process first page for now
+                if pages:
+                    import io
+                    img_byte_arr = io.BytesIO()
+                    pages[0].save(img_byte_arr, format='PNG')
+                    img_byte_arr = img_byte_arr.getvalue()
+                    raw_text, ocr_results_with_boxes = self.extract_from_image(img_byte_arr)
+                    if not raw_text.strip():
+                        raise ValueError("OCR fallback also resulted in empty content.")
+                    self.logger.info("OCR fallback successful.")
+                else:
+                    raise ValueError("Could not render PDF page to image for OCR.")
+            except ImportError:
+                self.logger.error("pdf2image or its dependencies not installed. Cannot perform OCR fallback for image-based PDFs.")
+                raise ImportError("OCR fallback for image-based PDFs requires pdf2image. Please install it (and poppler for Windows).")
+            except Exception as e:
+                self.logger.error(f"Error during OCR fallback for PDF {pdf_path}: {e}")
+                raise ValueError(f"PDF text extraction and OCR fallback resulted in empty content. Error: {e}")
         
         # Pass ocr_results_with_boxes to parse_with_ai
         structured_data = self.parse_with_ai(raw_text, ocr_results_with_boxes)
@@ -535,10 +559,45 @@ class AIInvoiceExtractor:
         result["_raw_text"] = raw_text
         return result
 
-    def extract_from_image(self, image_bytes: bytes) -> dict:
+    def extract_from_image(self, image_bytes: bytes) -> Tuple[str, List]:
         """
-        Temporarily disabled: Image recognition functionality. Returning placeholder.
+        Extract text and bounding box information from an image using EasyOCR.
+        Dependencies (easyocr, numpy, cv2) are lazily loaded.
         """
-        logger.info("Image recognition functionality is temporarily disabled.")
-        return {"error": "Image recognition is temporarily disabled due to environment issues. Please use PDF for now."
-               }
+        try:
+            import easyocr
+            import numpy as np
+            import cv2
+        except ImportError:
+            self.logger.error("EasyOCR dependencies (easyocr, numpy, opencv-python-headless) not installed.")
+            raise ImportError("Image recognition requires easyocr, numpy, and opencv-python-headless. Please install them.")
+
+        # Convert bytes to numpy array
+        np_image = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+
+        if image is None:
+            self.logger.error("Failed to decode image bytes.")
+            raise ValueError("Invalid image bytes provided.")
+
+        reader = easyocr.Reader(['en'], gpu=False) # Use English, disable GPU for broader compatibility
+        results = reader.readtext(image)
+
+        full_text = ""
+        ocr_results_with_boxes = [] # Format: [[x_min, y_min, x_max, y_max], text, probability]
+
+        for (bbox, text, prob) in results:
+            # bbox is a list of 4 (x,y) points, need to convert to [x_min, y_min, x_max, y_max]
+            x_coords = [p[0] for p in bbox]
+            y_coords = [p[1] for p in bbox]
+            x_min, y_min = min(x_coords), min(y_coords)
+            x_max, y_max = max(x_coords), max(y_coords)
+            
+            full_text += text + " "
+            ocr_results_with_boxes.append([[x_min, y_min, x_max, y_max], text, prob])
+        
+        # Simple line merging for better context for AI (similar to what was done for PDF text)
+        merged_text = self._merge_weighted_item_lines(full_text)
+        
+        return merged_text, ocr_results_with_boxes
+
