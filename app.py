@@ -16,6 +16,38 @@ from supabase_manager import SupabaseManager
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
 
+def safe_convert_to_dict(raw_data):
+    """无论传入什么怪物，保证输出一个绝对安全的字典"""
+    # 1. 狂暴解包：如果是嵌套的 tuple 或 list，一层层扒开
+    while isinstance(raw_data, (tuple, list)):
+        if len(raw_data) == 0:
+            return {}
+        raw_data = raw_data[0]
+        
+    # 2. 榨取对象：如果是 Pydantic 对象，强制导出
+    if hasattr(raw_data, 'model_dump'):
+        try: return raw_data.model_dump()
+        except: pass
+    elif hasattr(raw_data, 'dict'):
+        try: return raw_data.dict()
+        except: pass
+        
+    # 3. 强力解析：如果是 JSON 字符串，反序列化
+    if isinstance(raw_data, str):
+        try: return json.loads(raw_data)
+        except: return {"raw_text_extracted": raw_data}
+        
+    # 4. 深度清理：如果已经是字典，检查里面有没有藏着 JSON 字符串
+    if isinstance(raw_data, dict):
+        for k, v in list(raw_data.items()):
+            if isinstance(v, str) and v.strip().startswith('{'):
+                try: raw_data[k] = json.loads(v)
+                except: pass
+        return raw_data
+        
+    # 5. 终极兜底
+    return {"unknown_data": str(raw_data)}
+
 def force_extract_dump(obj):
     """
     暴力解包器：不管传入的是 tuple、list、Pydantic 对象还是 JSON 字符串，
@@ -1214,8 +1246,10 @@ def main():
                                         del st.session_state['raw_ocr_output']
                                 else:
                                     # If Pydantic object, convert to dict for storage and display
-                                    if not isinstance(data, dict):
-                                        data = force_extract_dump(data)
+                                    # 绝对防御转换：确保 data 始终是一个安全的字典
+                                    data = safe_convert_to_dict(data)
+                                    st.info("💡 UI 照妖镜 - 转换后数据类型：" + str(type(data)))
+                                    st.write("💡 UI 照妖镜 - 转换后数据内容：", data)
                                     
                                     # Store raw text in session state as requested
                                     if "_raw_text" in data:
@@ -1248,7 +1282,10 @@ def main():
                 data = {"warning": "No invoice data loaded or processed yet."} # Default initialization
                 
                 if 'invoice_data' in st.session_state and st.session_state['invoice_data'] is not None:
-                    data = st.session_state['invoice_data']
+                    # 绝对防御转换：确保 data 始终是一个安全的字典，用于前端显示
+                    data = safe_convert_to_dict(st.session_state['invoice_data'])
+                    st.info("💡 UI 照妖镜 - 显示前数据类型：" + str(type(data)))
+                    st.write("💡 UI 照妖镜 - 显示前数据内容：", data)
 
                     # If diagnostic mode result, display specially
                     if "diagnostic_description" in data:
@@ -1258,39 +1295,6 @@ def main():
                         return # Stop rendering
 
                     # Warning Display (New)
-                    # --- 强制防御墙 & 深度解码器 ---
-                    if isinstance(data, tuple):
-                        data = data[0] if len(data) > 0 else {}
-                    
-                    if hasattr(data, 'model_dump'):
-                        data = data.model_dump()
-                    elif hasattr(data, 'dict'):
-                        data = data.dict()
-                    
-                    # 如果 data 被 LLM 吐成了一个纯 JSON 字符串，强行把它扒开！
-                    if isinstance(data, str):
-                        try:
-                            data = json.loads(data)
-                        except Exception:
-                            pass
-                    
-                    # 如果字典里有一个键叫 'response' 或 'raw_data'，而且里面是字符串，继续扒开它！
-                    for key in list(data.keys()):
-                        if isinstance(data[key], str) and "{" in data[key]:
-                            try:
-                                data = json.loads(data[key])
-                                break
-                            except:
-                                pass
-                    
-                    if not isinstance(data, dict):
-                        data = {}
-                    
-                    # 🔦 终极照妖镜：把字典原形毕露地打印在前端页面上！
-                    st.info("👇 [内部调试] 真实提取到的底层字典数据如下 👇")
-                    st.json(data)
-                    st.info("👆 [内部调试] 结束 👆")
-                    # --------------------------------------------------------
                     if data.get("warning"):
                         st.warning(f"⚠️ **Smart Audit Report:** {data.get('warning')}")
 
