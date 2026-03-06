@@ -525,32 +525,8 @@ class AIInvoiceExtractor:
         """Full PDF processing flow: Extract text -> AI Parse -> Return dict"""
         self.logger.info(f"Processing PDF: {pdf_path}")
         raw_text, ocr_results_with_boxes = self.extract_text_from_pdf(pdf_path)
-
-        # If pdfplumber extracted no text, try OCR as a fallback
         if not raw_text.strip():
-            self.logger.warning("PDF text extraction resulted in empty content. Attempting OCR fallback.")
-            # Render PDF to image and use extract_from_image
-            try:
-                from pdf2image import convert_from_bytes # Lazy import
-                pdf_bytes = open(pdf_path, 'rb').read()
-                pages = convert_from_bytes(pdf_bytes, first_page=1, last_page=1) # Only process first page for now
-                if pages:
-                    import io
-                    img_byte_arr = io.BytesIO()
-                    pages[0].save(img_byte_arr, format='PNG')
-                    img_byte_arr = img_byte_arr.getvalue()
-                    raw_text, ocr_results_with_boxes = self.extract_from_image(img_byte_arr)
-                    if not raw_text.strip():
-                        raise ValueError("OCR fallback also resulted in empty content.")
-                    self.logger.info("OCR fallback successful.")
-                else:
-                    raise ValueError("Could not render PDF page to image for OCR.")
-            except ImportError:
-                self.logger.error("pdf2image or its dependencies not installed. Cannot perform OCR fallback for image-based PDFs.")
-                raise ImportError("OCR fallback for image-based PDFs requires pdf2image. Please install it (and poppler for Windows).")
-            except Exception as e:
-                self.logger.error(f"Error during OCR fallback for PDF {pdf_path}: {e}")
-                raise ValueError(f"PDF text extraction and OCR fallback resulted in empty content. Error: {e}")
+            raise ValueError("PDF text extraction resulted in empty content.")
         
         # Pass ocr_results_with_boxes to parse_with_ai
         structured_data = self.parse_with_ai(raw_text, ocr_results_with_boxes)
