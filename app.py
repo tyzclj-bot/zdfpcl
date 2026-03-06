@@ -1258,6 +1258,16 @@ def main():
                         return # Stop rendering
 
                     # Warning Display (New)
+                    # --- 强制防御墙：不管 data 是什么怪物，在这里统统变成字典 ---
+                    if isinstance(data, tuple):
+                        data = data[0] if len(data) > 0 else {}
+                    if hasattr(data, 'model_dump'):
+                        data = data.model_dump()
+                    elif hasattr(data, 'dict'):
+                        data = data.dict()
+                    if not isinstance(data, dict):
+                        data = {}
+                    # --------------------------------------------------------
                     if data.get("warning"):
                         st.warning(f"⚠️ **Smart Audit Report:** {data.get('warning')}")
 
