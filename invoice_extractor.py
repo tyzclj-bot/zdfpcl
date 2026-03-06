@@ -590,11 +590,8 @@ class AIInvoiceExtractor:
         structured_data = self.parse_with_ai(raw_text, ocr_results_with_boxes)
         return structured_data
 
-    def extract_from_image(self, image_bytes: bytes) -> Tuple[str, List]:
-        """
-        Extract text and bounding box information from an image using EasyOCR.
-        Dependencies (easyocr, numpy, cv2) are lazily loaded.
-        """
+    def extract_from_image(self, image_bytes: bytes) -> InvoiceData: # Changed return type
+        """Extract text and bounding box information from an image using EasyOCR, then parse with AI."""
         try:
             import easyocr
             import numpy as np
@@ -602,34 +599,47 @@ class AIInvoiceExtractor:
         except ImportError:
             self.logger.error("EasyOCR dependencies (easyocr, numpy, opencv-python-headless) not installed.")
             raise ImportError("Image recognition requires easyocr, numpy, and opencv-python-headless. Please install them.")
+        
+        try: # New try block for the processing logic
+            # Convert bytes to numpy array
+            np_image = np.frombuffer(image_bytes, np.uint8)
+            image = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
 
-        # Convert bytes to numpy array
-        np_image = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+            if image is None:
+                self.logger.error("Failed to decode image bytes.")
+                raise ValueError("Invalid image bytes provided.")
 
-        if image is None:
-            self.logger.error("Failed to decode image bytes.")
-            raise ValueError("Invalid image bytes provided.")
+            reader = easyocr.Reader(['ch_sim', 'en'], gpu=False) # Use languages from replace_block
+            results = reader.readtext(image)
 
-        reader = easyocr.Reader(['en'], gpu=False) # Use English, disable GPU for broader compatibility
-        results = reader.readtext(image)
+            full_text = ""
+            ocr_results_with_boxes = [] # Format: [[x_min, y_min, x_max, y_max], text, probability]
 
-        full_text = ""
-        ocr_results_with_boxes = [] # Format: [[x_min, y_min, x_max, y_max], text, probability]
-
-        for (bbox, text, prob) in results:
-            # bbox is a list of 4 (x,y) points, need to convert to [x_min, y_min, x_max, y_max]
-            x_coords = [p[0] for p in bbox]
-            y_coords = [p[1] for p in bbox]
-            x_min, y_min = min(x_coords), min(y_coords)
-            x_max, y_max = max(x_coords), max(y_coords)
+            for (bbox, text, prob) in results:
+                # bbox is a list of 4 (x,y) points, need to convert to [x_min, y_min, x_max, y_max]
+                x_coords = [p[0] for p in bbox]
+                y_coords = [p[1] for p in bbox]
+                x_min, y_min = min(x_coords), min(y_coords)
+                x_max, y_max = max(x_coords), max(y_coords)
+                
+                full_text += text + " "
+                ocr_results_with_boxes.append([[x_min, y_min, x_max, y_max], text, prob])
             
-            full_text += text + " "
-            ocr_results_with_boxes.append([[x_min, y_min, x_max, y_max], text, prob])
-        
-        # Simple line merging for better context for AI (similar to what was done for PDF text)
-        # Note: _merge_weighted_item_lines expects ocr_results_with_boxes, not full_text
-        merged_text = self._merge_weighted_item_lines(ocr_results_with_boxes)
-        
-        return merged_text, ocr_results_with_boxes
+            # Simple line merging for better context for AI (similar to what was done for PDF text)
+            # Note: _merge_weighted_item_lines expects ocr_results_with_boxes, not full_text
+            merged_text = self._merge_weighted_item_lines(ocr_results_with_boxes)
+            
+            # Now, parse the extracted text with AI and return InvoiceData
+            structured_data = self.parse_with_ai(merged_text, ocr_results_with_boxes)
+            return structured_data
+        except Exception as e:
+            self.logger.error(f"Error extracting text from image or AI parsing failed: {e}", exc_info=True)
+            # Fallback to an empty InvoiceData object on error, preventing crash
+            return InvoiceData(
+                vendor_name="UNKNOWN_IMAGE_PROCESSING_ERROR",
+                total_amount=0.0,
+                tax_amount=0.0,
+                currency="USD",
+                warning=f"Critical image processing or AI parsing failure: {e}. Data could not be extracted."
+            )
 
