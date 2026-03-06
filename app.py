@@ -1,7 +1,7 @@
 
 import streamlit as st
 import pandas as pd
-import json # Added for force_extract_dump
+import json
 import os
 import io
 import time
@@ -10,57 +10,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from invoice_extractor import AIInvoiceExtractor, InvoiceData
+from invoice_extractor import AIInvoiceExtractor
 from quickbooks_adapter import QuickBooksAdapter
 from supabase_manager import SupabaseManager
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
-
-def force_extract_dump(obj):
-    """
-    暴力解包器：不管传入的是 tuple、list、Pydantic 对象还是 JSON 字符串，
-    强行找出带有 model_dump 或 dict 方法的实例并提取数据，或直接解析 JSON 字符串！
-    """
-    # Step 1: Handle JSON string first
-    if isinstance(obj, str):
-        try:
-            # Attempt to parse as JSON
-            json_obj = json.loads(obj)
-            # If successfully parsed, recursively call to handle the parsed object
-            # This ensures that if the JSON string itself contains a Pydantic model's JSON, it's also processed
-            return force_extract_dump(json_obj)
-        except json.JSONDecodeError:
-            # Not a valid JSON string, treat as a regular string for fallback
-            pass
-
-    # Step 2: Handle Pydantic objects or dict-like objects
-    if hasattr(obj, 'model_dump'):
-        return obj.model_dump()
-    elif hasattr(obj, 'dict'):
-        return obj.dict()
-    
-    # Step 3: Handle tuples or lists (containing Pydantic objects or dicts)
-    if isinstance(obj, (tuple, list)):
-        # We need to decide if we want to return the first valid extracted item
-        # or a list of all extracted items. Based on the previous implementation,
-        # it returned the first found. Let's maintain that behavior but improve it.
-        extracted_list_items = []
-        for item in obj:
-            extracted = force_extract_dump(item)
-            if isinstance(extracted, dict) and "fallback_data" not in extracted:
-                # If it's a valid extracted dict and not a simple fallback, add it
-                extracted_list_items.append(extracted)
-        if extracted_list_items:
-            # If we extracted valid items, return them as a list.
-            # If the original intent was to only get one, the caller needs to handle it.
-            # However, for display, a list is generally more useful.
-            return extracted_list_items
-        # If no valid items were extracted from the list/tuple, fall back
-        return {"raw_extracted_data": str(obj)}
-    
-    # Final fallback for any other object type
-    return {"fallback_data": str(obj)}
-
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -679,36 +633,17 @@ def main():
                 if st.session_state.credits <= 0:
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
                     # Lemon Squeezy Checkout URL
-                    gumroad_pro_url = "https://tyzclj.gumroad.com/l/quickbills"
-                    st.link_button("🚀 Upgrade to Pro - $19.99", gumroad_pro_url, type="primary", use_container_width=True)
+                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                    st.link_button("🚀 Upgrade to Pro - $19.99", checkout_url, type="primary", use_container_width=True)
                 
                 # Upgrade/Top Up Button (Sidebar always shows if not pro)
                 if plan_status != 'pro':
                     # Lemon Squeezy Checkout URL
-                    checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
-                    html_button = f"""
-                        <a href="{checkout_url}" target="_blank" style="
-                            display: inline-flex;
-                            align-items: center;
-                            justify-content: center;
-                            background-color: #FF4B4B; /* Streamlit's default primary button color */
-                            color: white;
-                            font-weight: bold;
-                            padding: 0.75rem 1.25rem;
-                            border-radius: 0.5rem;
-                            text-decoration: none;
-                            font-size: 1rem;
-                            width: 100%;
-                            box-sizing: border-box;
-                            transition: background-color 0.2s;
-                        ">
-                            ✨ Subscribe to Pro - $19.99/mo
-                        </a>
-                    """
-                    st.markdown(html_button, unsafe_allow_html=True)
+                    checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                    st.link_button("💎 Get Pro - $19.99/mo", checkout_url, type="secondary", use_container_width=True)
                     st.markdown("""
                         <div class="secure-badge">
-                            <span>🔒 Secured by Gumroad</span>
+                            <span>🔒 Secured by Lemon Squeezy</span>
                         </div>
                     """, unsafe_allow_html=True)
 
@@ -829,30 +764,11 @@ def main():
                 st.markdown("---")
                 st.markdown("### 💎 Go Pro")
                 st.caption("Unlock unlimited processing and 24/7 support.")
-                checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
-                html_button = f"""
-                    <a href="{checkout_url}" target="_blank" style="
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        background-color: #FF4B4B; /* Streamlit's default primary button color */
-                        color: white;
-                        font-weight: bold;
-                        padding: 0.75rem 1.25rem;
-                        border-radius: 0.5rem;
-                        text-decoration: none;
-                        font-size: 1rem;
-                        width: 100%;
-                        box-sizing: border-box;
-                        transition: background-color 0.2s;
-                    ">
-                        ✨ Subscribe to Pro - $19.99/mo
-                    </a>
-                """
-                st.markdown(html_button, unsafe_allow_html=True)
+                checkout_url = "https://quickbills-ai.lemonsqueezy.com"
+                st.link_button("Subscribe Now - $19.99", checkout_url, type="secondary", use_container_width=True)
                 st.markdown("""
                     <div class="secure-badge">
-                        <span>🔒 Secured by Gumroad</span>
+                        <span>🔒 Secured by Lemon Squeezy</span>
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -1056,7 +972,7 @@ def main():
                             <span style="color: #10b981; margin-right: 0.75rem;">✔</span> 24/7 Priority Support
                         </li>
                     </ul>
-                    <a href="https://tyzclj.gumroad.com/l/quickbills" target="_blank" style="
+                    <a href="https://quickbills-ai.lemonsqueezy.com" target="_blank" style="
                         display: block;
                         background: #3b82f6;
                         color: white;
@@ -1069,7 +985,7 @@ def main():
                         transition: all 0.2s;
                     ">Subscribe Now</a>
                     <p style="margin-top: 1.25rem; font-size: 0.9rem; color: #94a3b8;">
-                        🔒 Secure checkout via Gumroad
+                        🔒 Secure checkout via Lemon Squeezy
                     </p>
                 </div>
             </div>
@@ -1174,28 +1090,15 @@ def main():
                                 
                                 if "image" in uploaded_file.type:
                                     st.write("Optimizing image for OCR...")
-                                    try:
-                                        data = extractor.extract_from_image(file_bytes)
-                                    except Exception as e:
-                                        st.error(f"Image OCR Error: {e}")
-                                        status.update(label="Image Processing Failed", state="error", expanded=True)
-                                        data = InvoiceData(vendor_name="ERROR_IMAGE_OCR", total_amount=0.0, warning=f"Image OCR Error: {e}")
+                                    data = extractor.extract_from_image(file_bytes)
                                 else: # It's a PDF
                                     st.write("Extracting raw text layer...")
-                                    tmp_path = None # Initialize tmp_path
-                                    try:
-                                        with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                                            tmp.write(file_bytes)
-                                            tmp_path = tmp.name
-                                        
-                                        data = extractor.process_pdf(tmp_path)
-                                    except Exception as e:
-                                        st.error(f"PDF Processing Error: {e}")
-                                        status.update(label="PDF Processing Failed", state="error", expanded=True)
-                                        data = InvoiceData(vendor_name="ERROR_PDF_PROCESSING", total_amount=0.0, warning=f"PDF Processing Error: {e}")
-                                    finally:
-                                        if tmp_path and os.path.exists(tmp_path):
-                                            os.unlink(tmp_path)
+                                    with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                                        tmp.write(file_bytes)
+                                        tmp_path = tmp.name
+                                    
+                                    data = extractor.process_pdf(tmp_path)
+                                    os.unlink(tmp_path)
                                 
                                 st.write("Identifying line items & totals...")
                                 time.sleep(0.5) 
@@ -1215,7 +1118,7 @@ def main():
                                 else:
                                     # If Pydantic object, convert to dict for storage and display
                                     if not isinstance(data, dict):
-                                        data = force_extract_dump(data)
+                                        data = data.model_dump()
                                     
                                     # Store raw text in session state as requested
                                     if "_raw_text" in data:
@@ -1239,15 +1142,12 @@ def main():
                             except Exception as e:
                                 status.update(label="Analysis Error", state="error", expanded=True)
                                 st.error(f"An error occurred during processing: {str(e)}")
-                                st.session_state['invoice_data'] = InvoiceData(vendor_name="ERROR_GENERAL_PROCESSING", total_amount=0.0, warning=f"General Processing Error: {str(e)}")
 
         with col2:
             with st.container(border=True):
                 st.subheader("2. Extraction Results")
                 
-                data = {"warning": "No invoice data loaded or processed yet."} # Default initialization
-                
-                if 'invoice_data' in st.session_state and st.session_state['invoice_data'] is not None:
+                if 'invoice_data' in st.session_state:
                     data = st.session_state['invoice_data']
 
                     # If diagnostic mode result, display specially
@@ -1258,39 +1158,6 @@ def main():
                         return # Stop rendering
 
                     # Warning Display (New)
-                    # --- 强制防御墙 & 深度解码器 ---
-                    if isinstance(data, tuple):
-                        data = data[0] if len(data) > 0 else {}
-                    
-                    if hasattr(data, 'model_dump'):
-                        data = data.model_dump()
-                    elif hasattr(data, 'dict'):
-                        data = data.dict()
-                    
-                    # 如果 data 被 LLM 吐成了一个纯 JSON 字符串，强行把它扒开！
-                    if isinstance(data, str):
-                        try:
-                            data = json.loads(data)
-                        except Exception:
-                            pass
-                    
-                    # 如果字典里有一个键叫 'response' 或 'raw_data'，而且里面是字符串，继续扒开它！
-                    for key in list(data.keys()):
-                        if isinstance(data[key], str) and "{" in data[key]:
-                            try:
-                                data = json.loads(data[key])
-                                break
-                            except:
-                                pass
-                    
-                    if not isinstance(data, dict):
-                        data = {}
-                    
-                    # 🔦 终极照妖镜：把字典原形毕露地打印在前端页面上！
-                    st.info("👇 [内部调试] 真实提取到的底层字典数据如下 👇")
-                    st.json(data)
-                    st.info("👆 [内部调试] 结束 👆")
-                    # --------------------------------------------------------
                     if data.get("warning"):
                         st.warning(f"⚠️ **Smart Audit Report:** {data.get('warning')}")
 
