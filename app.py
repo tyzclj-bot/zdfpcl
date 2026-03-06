@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from invoice_extractor import AIInvoiceExtractor
+from invoice_extractor import AIInvoiceExtractor, InvoiceData
 from quickbooks_adapter import QuickBooksAdapter
 from supabase_manager import SupabaseManager
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
@@ -1179,15 +1179,23 @@ def main():
                                     except Exception as e:
                                         st.error(f"Image OCR Error: {e}")
                                         status.update(label="Image Processing Failed", state="error", expanded=True)
-                                        return
+                                        data = InvoiceData(vendor_name="ERROR_IMAGE_OCR", total_amount=0.0, warning=f"Image OCR Error: {e}")
                                 else: # It's a PDF
                                     st.write("Extracting raw text layer...")
-                                    with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                                        tmp.write(file_bytes)
-                                        tmp_path = tmp.name
-                                    
-                                    data = extractor.process_pdf(tmp_path)
-                                    os.unlink(tmp_path)
+                                    tmp_path = None # Initialize tmp_path
+                                    try:
+                                        with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                                            tmp.write(file_bytes)
+                                            tmp_path = tmp.name
+                                        
+                                        data = extractor.process_pdf(tmp_path)
+                                    except Exception as e:
+                                        st.error(f"PDF Processing Error: {e}")
+                                        status.update(label="PDF Processing Failed", state="error", expanded=True)
+                                        data = InvoiceData(vendor_name="ERROR_PDF_PROCESSING", total_amount=0.0, warning=f"PDF Processing Error: {e}")
+                                    finally:
+                                        if tmp_path and os.path.exists(tmp_path):
+                                            os.unlink(tmp_path)
                                 
                                 st.write("Identifying line items & totals...")
                                 time.sleep(0.5) 
@@ -1231,6 +1239,7 @@ def main():
                             except Exception as e:
                                 status.update(label="Analysis Error", state="error", expanded=True)
                                 st.error(f"An error occurred during processing: {str(e)}")
+                                st.session_state['invoice_data'] = InvoiceData(vendor_name="ERROR_GENERAL_PROCESSING", total_amount=0.0, warning=f"General Processing Error: {str(e)}")
 
         with col2:
             with st.container(border=True):
