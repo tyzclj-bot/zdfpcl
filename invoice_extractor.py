@@ -28,14 +28,14 @@ def clean_price(price_input):
 import re
 import json
 import logging
-import io # Added for BytesIO handling
 from typing import List, Optional, Tuple, Any
 from pydantic import BaseModel, Field
 import config
 import os
 import requests
-import pdfplumber # Added to fix NameError
-import math # Added for floating point comparisons
+import pdfplumber
+import math
+from tempfile import NamedTemporaryFile # Added for temporary file handling
 
 
 
@@ -66,13 +66,12 @@ class AIInvoiceExtractor:
         # Empty init as we handle requests manually
         self.logger = logger
 
-    def extract_text_from_pdf(self, pdf_file_obj: io.BytesIO) -> Tuple[str, List]:
+    def extract_text_from_pdf(self, pdf_path: str) -> Tuple[str, List]:
         """Extract all text from PDF along with bounding box information."""
         full_text = ""
         ocr_results_with_boxes = []
         try:
-            # pdfplumber.open can directly accept a file-like object (io.BytesIO)
-            with pdfplumber.open(pdf_file_obj) as pdf:
+            with pdfplumber.open(pdf_path) as pdf:
                 for page in pdf.pages:
                     page_text = page.extract_text()
                     if page_text:
@@ -81,13 +80,11 @@ class AIInvoiceExtractor:
                     # Extract words with bounding boxes
                     words = page.extract_words()
                     for word in words:
-                        # pdfplumber word format: {'text': '...', 'x0': ..., 'y0': ..., 'x1': ..., 'y1': ..., 'doctop': ..., 'upright': ..., 'direction': 'ltr'}
-                        # Using 'top' and 'bottom' for y-coordinates as pdfplumber provides them
                         bbox = [word['x0'], word['top'], word['x1'], word['bottom']]
-                        ocr_results_with_boxes.append([bbox, word['text'], 1.0]) # 1.0 is a dummy probability
+                        ocr_results_with_boxes.append([bbox, word['text'], 1.0])
             return full_text, ocr_results_with_boxes
         except Exception as e:
-            logger.error(f"Error extracting text and boxes from PDF: {e}")
+            logger.error(f"Error extracting text and boxes from PDF {pdf_path}: {e}")
             raise
 
     def _find_text_bbox(self, text_to_find: str, ocr_results_with_boxes: List) -> Optional[Tuple[List[List[int]], str, float]]:
@@ -534,15 +531,26 @@ class AIInvoiceExtractor:
         if not pdf_file_bytes:
             raise ValueError("PDF file bytes cannot be empty.")
 
-        # Wrap bytes in BytesIO for pdfplumber
-        pdf_file_obj = io.BytesIO(pdf_file_bytes)
-        
-        # Extract raw text and bounding boxes using pdfplumber
-        raw_text, ocr_results_with_boxes = self.extract_text_from_pdf(pdf_file_obj)
-        self.logger.info(f"Processing PDF. Extracted text length: {len(raw_text)}")
-        if not raw_text.strip():
-            raise ValueError("PDF text extraction resulted in empty content.")
-        
+        # Use a temporary file for pdfplumber to ensure file-like object behavior
+        with NamedTemporaryFile(delete=True, suffix=".pdf") as tmp_file:
+            tmp_file.write(pdf_file_bytes)
+            tmp_file.flush() # Ensure all data is written to disk
+            
+            # Extract raw text and bounding boxes using pdfplumber from the temporary file path
+            raw_text, ocr_results_with_boxes = self.extract_text_from_pdf(tmp_file.name)
+            self.logger.info(f"Processing PDF. Extracted text length: {len(raw_text)}")
+            
+            if not raw_text.strip():
+                # For scanned PDFs, pdfplumber will return empty text. Trigger OCR here.
+                self.logger.info("PDF text extraction resulted in empty content. Attempting OCR...")
+                try:
+                    # Re-enable OCR for scanned PDFs here. Ensure easyocr dependencies are handled.
+                    # For now, let's return a specific warning for the user.
+                    raise ValueError("No text found in PDF. OCR for scanned PDFs is not yet fully integrated. Please upload a text-based PDF.")
+                except Exception as e:
+                    self.logger.error(f"OCR fallback failed for empty PDF: {e}")
+                    raise ValueError("Failed to process scanned PDF via OCR. Please ensure it's a text-based PDF or OCR service is available.")
+
         # Pass ocr_results_with_boxes to parse_with_ai
         structured_data = self.parse_with_ai(raw_text, ocr_results_with_boxes)
         return structured_data
