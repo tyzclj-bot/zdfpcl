@@ -8,6 +8,10 @@ from datetime import datetime
 from typing import Any
 from supabase_manager import SupabaseManager
 import time
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Lemon Squeezy checkout URL for the Pro Plan
 checkout_url = "https://quickbills-ai.lemonsqueezy.com"
@@ -16,7 +20,12 @@ checkout_url = "https://quickbills-ai.lemonsqueezy.com"
 @st.cache_resource
 def init_supabase():
     try:
-        supabase_manager = SupabaseManager()
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        if not supabase_url or not supabase_key:
+            st.error("Supabase environment variables (SUPABASE_URL, SUPABASE_KEY) are not set.")
+            return None
+        supabase_manager = SupabaseManager(url=supabase_url, key=supabase_key)
         # st.success("Supabase initialized successfully!") # For debugging
         return supabase_manager
     except Exception as e:
@@ -95,7 +104,7 @@ if "auth_manager" not in st.session_state:
 
 # Sidebar for login/logout and navigation
 with st.sidebar:
-    st.image("logo.png", use_column_width=True)
+    # st.image("logo.png", use_column_width=True)
     st.title("QuickBills AI")
 
     if supabase_manager:
