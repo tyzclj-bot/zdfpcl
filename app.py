@@ -16,6 +16,31 @@ from supabase_manager import SupabaseManager
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
 
+def force_extract_dump(obj):
+    """
+    暴力解包器：不管传入的是 tuple、list 还是 Pydantic 对象，
+    强行找出带有 model_dump 或 dict 方法的实例并提取数据！
+    """
+    # 如果是个 tuple 或 list，遍历它，把真正的数据体找出来
+    if isinstance(obj, (tuple, list)):
+        for item in obj:
+            if hasattr(item, 'model_dump'):
+                return item.model_dump()
+            elif hasattr(item, 'dict'):
+                return item.dict()
+        # 如果都没找到，强行转成字典返回
+        return {"raw_extracted_data": str(obj)}
+    
+    # 如果直接就是对象
+    if hasattr(obj, 'model_dump'):
+        return obj.model_dump()
+    elif hasattr(obj, 'dict'):
+        return obj.dict()
+    
+    # 终极兜底
+    return {"fallback_data": str(obj)}
+
+
 # --- Page Configuration ---
 st.set_page_config(
     page_title="AI Invoice Parser - QuickBooks Automation & Email to Bill",
@@ -1161,7 +1186,7 @@ def main():
                                 else:
                                     # If Pydantic object, convert to dict for storage and display
                                     if not isinstance(data, dict):
-                                        data = data.model_dump()
+                                        data = force_extract_dump(data)
                                     
                                     # Store raw text in session state as requested
                                     if "_raw_text" in data:
