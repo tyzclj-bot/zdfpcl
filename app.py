@@ -1,7 +1,7 @@
 
 import streamlit as st
 import pandas as pd
-import json
+import json # Added for force_extract_dump
 import os
 import io
 import time
@@ -21,17 +21,33 @@ def force_extract_dump(obj):
     暴力解包器：不管传入的是 tuple、list 还是 Pydantic 对象，
     强行找出带有 model_dump 或 dict 方法的实例并提取数据！
     """
+    # 如果是字符串，尝试解析 JSON
+    if isinstance(obj, str):
+        try:
+            parsed_json = json.loads(obj)
+            # 如果解析出的 JSON 是一个字典且包含关键字段，认为找到了真实数据
+            if isinstance(parsed_json, dict) and ("total_amount" in parsed_json or "totalAmt" in parsed_json):
+                return parsed_json
+            # 如果解析出的 JSON 是一个列表，遍历列表元素
+            if isinstance(parsed_json, list):
+                for item in parsed_json:
+                    if isinstance(item, dict) and ("total_amount" in item or "totalAmt" in item):
+                        return item # 返回第一个包含关键字段的字典
+        except json.JSONDecodeError:
+            pass # 不是有效的 JSON 字符串，继续下面的逻辑
+
     # 如果是个 tuple 或 list，遍历它，把真正的数据体找出来
     if isinstance(obj, (tuple, list)):
         for item in obj:
-            if hasattr(item, 'model_dump'):
-                return item.model_dump()
-            elif hasattr(item, 'dict'):
-                return item.dict()
-        # 如果都没找到，强行转成字典返回
+            # 递归调用自身，处理嵌套的可能
+            extracted = force_extract_dump(item)
+            # 如果递归调用返回了非兜底数据，说明找到了
+            if extracted and not (extracted.get("fallback_data") or extracted.get("raw_extracted_data")):
+                return extracted
+        # 如果遍历完所有元素都没找到，再尝试通用兜底
         return {"raw_extracted_data": str(obj)}
     
-    # 如果直接就是对象
+    # 如果直接就是 Pydantic 对象
     if hasattr(obj, 'model_dump'):
         return obj.model_dump()
     elif hasattr(obj, 'dict'):
