@@ -1245,10 +1245,14 @@ def main():
             with st.container(border=True):
                 st.subheader("2. Extraction Results")
                 
+                data = {"warning": "No invoice data loaded or processed yet."}
+                
                 if 'invoice_data' in st.session_state:
-                    data = st.session_state['invoice_data']
-                    if data is None:
-                        data = InvoiceData(vendor_name="ERROR_SESSION_STATE", total_amount=0.0, warning="Session state data was None unexpectedly.")
+                    session_data = st.session_state['invoice_data']
+                    if session_data is not None:
+                        data = session_data
+                    else:
+                        data = {"warning": "Invoice data in session state was explicitly None."} # Overwrite with a specific warning
 
                     # If diagnostic mode result, display specially
                     if "diagnostic_description" in data:
