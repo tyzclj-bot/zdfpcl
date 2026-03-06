@@ -539,6 +539,6 @@ class AIInvoiceExtractor:
         """
         Temporarily disabled: Image recognition functionality. Returning placeholder.
         """
-        self.logger.info("Image recognition functionality is temporarily disabled.")
+        logger.info("Image recognition functionality is temporarily disabled.")
         return {"error": "Image recognition is temporarily disabled due to environment issues. Please use PDF for now."
                }
