@@ -122,6 +122,10 @@ class AIInvoiceExtractor:
         if not ocr_results_with_boxes:
             return ""
 
+        if not isinstance(ocr_results_with_boxes, list):
+            self.logger.error(f"_merge_weighted_item_lines received non-list type: {type(ocr_results_with_boxes)}")
+            return str(ocr_results_with_boxes) # Return as string if not a list to prevent further errors
+
         # Sort results by top-left Y-coordinate
         ocr_results_with_boxes.sort(key=lambda x: x[0][1])
 
