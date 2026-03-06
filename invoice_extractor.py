@@ -28,6 +28,7 @@ def clean_price(price_input):
 import re
 import json
 import logging
+import io # Added for BytesIO handling
 from typing import List, Optional, Tuple, Any
 from pydantic import BaseModel, Field
 import config
@@ -65,12 +66,13 @@ class AIInvoiceExtractor:
         # Empty init as we handle requests manually
         self.logger = logger
 
-    def extract_text_from_pdf(self, pdf_path: str) -> Tuple[str, List]:
+    def extract_text_from_pdf(self, pdf_file_obj: io.BytesIO) -> Tuple[str, List]:
         """Extract all text from PDF along with bounding box information."""
         full_text = ""
         ocr_results_with_boxes = []
         try:
-            with pdfplumber.open(pdf_path) as pdf:
+            # pdfplumber.open can directly accept a file-like object (io.BytesIO)
+            with pdfplumber.open(pdf_file_obj) as pdf:
                 for page in pdf.pages:
                     page_text = page.extract_text()
                     if page_text:
@@ -85,7 +87,7 @@ class AIInvoiceExtractor:
                         ocr_results_with_boxes.append([bbox, word['text'], 1.0]) # 1.0 is a dummy probability
             return full_text, ocr_results_with_boxes
         except Exception as e:
-            logger.error(f"Error extracting text and boxes from PDF {pdf_path}: {e}")
+            logger.error(f"Error extracting text and boxes from PDF: {e}")
             raise
 
     def _find_text_bbox(self, text_to_find: str, ocr_results_with_boxes: List) -> Optional[Tuple[List[List[int]], str, float]]:
@@ -527,19 +529,23 @@ class AIInvoiceExtractor:
             logger.error(f"AI parsing failed: {e}")
             raise
 
-    def process_pdf(self, pdf_path: str) -> dict:
-        """Full PDF processing flow: Extract text -> AI Parse -> Return dict"""
-        self.logger.info(f"Processing PDF: {pdf_path}")
-        raw_text, ocr_results_with_boxes = self.extract_text_from_pdf(pdf_path)
+    def process_pdf(self, pdf_file_bytes: bytes) -> InvoiceData:
+        """Processes a PDF file, extracts text, and then uses AI to structure the data."""
+        if not pdf_file_bytes:
+            raise ValueError("PDF file bytes cannot be empty.")
+
+        # Wrap bytes in BytesIO for pdfplumber
+        pdf_file_obj = io.BytesIO(pdf_file_bytes)
+        
+        # Extract raw text and bounding boxes using pdfplumber
+        raw_text, ocr_results_with_boxes = self.extract_text_from_pdf(pdf_file_obj)
+        self.logger.info(f"Processing PDF. Extracted text length: {len(raw_text)}")
         if not raw_text.strip():
             raise ValueError("PDF text extraction resulted in empty content.")
         
         # Pass ocr_results_with_boxes to parse_with_ai
         structured_data = self.parse_with_ai(raw_text, ocr_results_with_boxes)
-        # Return both structured data and raw text for debugging
-        result = structured_data.model_dump()
-        result["_raw_text"] = raw_text
-        return result
+        return structured_data
 
     def extract_from_image(self, image_bytes: bytes) -> Tuple[str, List]:
         """
