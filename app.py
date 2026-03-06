@@ -1247,6 +1247,8 @@ def main():
                 
                 if 'invoice_data' in st.session_state:
                     data = st.session_state['invoice_data']
+                    if data is None:
+                        data = InvoiceData(vendor_name="ERROR_SESSION_STATE", total_amount=0.0, warning="Session state data was None unexpectedly.")
 
                     # If diagnostic mode result, display specially
                     if "diagnostic_description" in data:
