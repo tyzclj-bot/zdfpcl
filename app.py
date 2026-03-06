@@ -245,7 +245,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-@st.cache_resource
+#@st.cache_resource
 def get_extractor_v6():
     """Use Streamlit cache to create and reuse AI extractor instance (Version 6 - Tax Validation)"""
     return AIInvoiceExtractor()
