@@ -289,10 +289,11 @@ class AIInvoiceExtractor:
         
         # Append feedback message if provided (for retries)
         if feedback_message:
-            prompt = f"{feedback_message}\n\n{prompt_base}"
+            prompt = f"{feedback_message}\\n\\n{prompt_base}"
         else:
             prompt = prompt_base
 
+        # --- 最外层暴力兜底 Try-Except ---
         try:
             # Manually construct request
             headers = {
@@ -316,20 +317,18 @@ class AIInvoiceExtractor:
             content = response_json['choices'][0]['message']['content']
             content = content.replace("```json", "").replace("```", "").strip()
             
+            invoice_dict = {} # Initialize invoice_dict
             try:
                 invoice_dict = json.loads(content)
             except json.JSONDecodeError as json_e:
                 logger.error(f"Failed to parse AI response JSON: {json_e}. Raw content: {content}")
-                # Attempt to recover by returning a default InvoiceData
-                return InvoiceData(
-                    vendor_name="Unknown",
-                    total_amount=0.0,
-                    tax_amount=0.0,
-                    currency="USD",
-                    warning=f"AI response JSON was malformed: {json_e}. Raw: {content[:200]}..."
-                )
+                # Fallback to an empty dict, will be handled by subsequent parsing logic
+                invoice_dict = {}
+                # Add a warning to the final InvoiceData
+                invoice_dict['warning'] = f"AI response JSON was malformed: {json_e}. Raw: {content[:200]}..."
 
             # --- Sanitize numerical fields from potential AI comments --- 
+            # This is crucial and already has its own robust cleaning, keep it.
             invoice_dict = self._recursive_sanitize_numerical_fields(invoice_dict)
             
             # --- Robust Item Parsing with Try-Except (Enhance Fault Tolerance) ---
@@ -338,38 +337,61 @@ class AIInvoiceExtractor:
             for item_dict in original_items:
                 try:
                     # After recursive sanitization, total_price, quantity, unit_price are already floats or 0.0
+                    # Attempt to create InvoiceItem, if any field is invalid, it will go to except block
                     processed_items.append(InvoiceItem(**item_dict))
-                except (ValueError, TypeError, KeyError) as e:
+                except Exception as e: # 捕获所有可能的异常
                     logger.error("Failed to parse item: %s. Error: %s", json.dumps(item_dict, ensure_ascii=False), e)
-                    # Mark as "Unidentified Item" and ensure total_price is 0.0
+                    # 暴力兜底：标记为 ERROR_ITEM，价格强制 0.00
                     processed_items.append(InvoiceItem(
-                        description=item_dict.get('description', 'Unidentified Item'),
-                        total_price=0.0,
-                        warning="Parsing failed: {}. Original data: {}...".format(e, json.dumps(item_dict, ensure_ascii=False)[:200])
+                        description="ERROR_ITEM",
+                        total_price=0.00,
+                        warning=f"Parsing failed: {e}. Original data: {json.dumps(item_dict, ensure_ascii=False)[:200]}..."
                     ))
             invoice_dict['items'] = processed_items # Replace with robustly parsed items
 
-            # After recursive sanitization, total_amount and tax_amount are already floats or 0.0
-            # No need for explicit float() cast or try-except here as _sanitize_numerical_field handles it.
-            # We can directly assign them if they exist, otherwise default to 0.0
-            invoice_dict['total_amount'] = invoice_dict.get('total_amount', 0.0)
-            invoice_dict['tax_amount'] = invoice_dict.get('tax_amount', 0.0)
+            # --- 针对 Total 和 Tax 的暴力兜底 ---
+            # _recursive_sanitize_numerical_fields 已经将它们转换为 float 或 0.0
+            # 这里再加一层，以防万一
+            try:
+                invoice_dict['total_amount'] = float(invoice_dict.get('total_amount', 0.0))
+            except Exception as e:
+                logger.error(f"Failed to process total_amount, defaulting to 0.0: {e}")
+                invoice_dict['total_amount'] = 0.0
+                invoice_dict['warning'] = (invoice_dict.get('warning', '') + f"Total amount parsing failed: {e}. ")
             
             try:
-                structured_data = InvoiceData(**invoice_dict)
+                invoice_dict['tax_amount'] = float(invoice_dict.get('tax_amount', 0.0))
+            except Exception as e:
+                logger.error(f"Failed to process tax_amount, defaulting to 0.0: {e}")
+                invoice_dict['tax_amount'] = 0.0
+                invoice_dict['warning'] = (invoice_dict.get('warning', '') + f"Tax amount parsing failed: {e}. ")
+
+            # --- 最终 InvoiceData 构造的暴力兜底 ---
+            final_structured_data = None
+            try:
+                final_structured_data = InvoiceData(**invoice_dict)
             except Exception as e:
                 logger.error(f"Pydantic validation or InvoiceData construction failed: {e}. Raw data: {invoice_dict}")
-                # Return a default InvoiceData object with a warning
-                structured_data = InvoiceData(
-                    vendor_name="Unknown",
-                    total_amount=0.0,
-                    tax_amount=0.0,
-                    currency="USD",
-                    warning=f"InvoiceData parsing failed: {e}. Original data might be malformed."
+                # 暴力兜底：返回一个带警告信息的 InvoiceData
+                final_structured_data = InvoiceData(
+                    vendor_name=invoice_dict.get('vendor_name', "Unknown"),
+                    total_amount=invoice_dict.get('total_amount', 0.0),
+                    tax_amount=invoice_dict.get('tax_amount', 0.0),
+                    currency=invoice_dict.get('currency', "USD"),
+                    warning=(invoice_dict.get('warning', '') + f"Overall InvoiceData construction failed: {e}. Original data might be severely malformed.")
                 )
+            return final_structured_data
 
-            # --- NEW POST-PROCESSING LOGIC (Priority over Math Audit) ---
-            post_processing_warnings = []
+        except Exception as e:
+            logger.error(f"DeepSeek AI parsing encountered a critical error: {e}", exc_info=True)
+            # 最外层兜底：无论发生什么，都返回一个不崩溃的 InvoiceData
+            return InvoiceData(
+                vendor_name="UNKNOWN_CRITICAL_ERROR",
+                total_amount=0.0,
+                tax_amount=0.0,
+                currency="USD",
+                warning=f"Critical AI parsing failure: {e}. Data could not be extracted. Check logs for details."
+            )
             Y_TOLERANCE = 5 # pixels
 
             # NEW: Collect all potential weight values from raw OCR for "Strong Validation Overlay"
