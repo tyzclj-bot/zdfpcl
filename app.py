@@ -6,6 +6,7 @@ import os
 import io
 import time
 from dotenv import load_dotenv
+import traceback # For detailed error logging
 
 # Load environment variables
 load_dotenv()
