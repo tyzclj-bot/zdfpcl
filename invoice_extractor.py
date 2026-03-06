@@ -573,7 +573,8 @@ class AIInvoiceExtractor:
             ocr_results_with_boxes.append([[x_min, y_min, x_max, y_max], text, prob])
         
         # Simple line merging for better context for AI (similar to what was done for PDF text)
-        merged_text = self._merge_weighted_item_lines(full_text)
+        # Note: _merge_weighted_item_lines expects ocr_results_with_boxes, not full_text
+        merged_text = self._merge_weighted_item_lines(ocr_results_with_boxes)
         
         return merged_text, ocr_results_with_boxes
 
