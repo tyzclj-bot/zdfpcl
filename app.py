@@ -17,6 +17,7 @@ from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
 
 def force_extract_dump(obj):
+    st.write(f"DEBUG: force_extract_dump received: {type(obj)} - {obj}") # Debug print
     """
     暴力解包器：不管传入的是 tuple、list 还是 Pydantic 对象，
     强行找出带有 model_dump 或 dict 方法的实例并提取数据！
@@ -27,11 +28,13 @@ def force_extract_dump(obj):
             parsed_json = json.loads(obj)
             # 如果解析出的 JSON 是一个字典且包含关键字段，认为找到了真实数据
             if isinstance(parsed_json, dict) and ("total_amount" in parsed_json or "totalAmt" in parsed_json):
+                st.write(f"DEBUG: force_extract_dump returning JSON dict: {parsed_json}") # Debug print
                 return parsed_json
             # 如果解析出的 JSON 是一个列表，遍历列表元素
             if isinstance(parsed_json, list):
                 for item in parsed_json:
-                    if isinstance(item, dict) and ("total_amount" in item or "totalAmt" in item):
+                    if isinstance(item, dict) and ("total_amount" in item or "totalAmt" in item): # Corrected 'parsed_json' to 'item'
+                        st.write(f"DEBUG: force_extract_dump returning JSON list item: {item}") # Debug print
                         return item # 返回第一个包含关键字段的字典
         except json.JSONDecodeError:
             pass # 不是有效的 JSON 字符串，继续下面的逻辑
@@ -43,18 +46,27 @@ def force_extract_dump(obj):
             extracted = force_extract_dump(item)
             # 如果递归调用返回了非兜底数据，说明找到了
             if extracted and not (extracted.get("fallback_data") or extracted.get("raw_extracted_data")):
+                st.write(f"DEBUG: force_extract_dump returning extracted from list/tuple: {extracted}") # Debug print
                 return extracted
         # 如果遍历完所有元素都没找到，再尝试通用兜底
-        return {"raw_extracted_data": str(obj)}
+        returned_data = {"raw_extracted_data": str(obj)}
+        st.write(f"DEBUG: force_extract_dump returning raw_extracted_data: {returned_data}") # Debug print
+        return returned_data
     
     # 如果直接就是 Pydantic 对象
     if hasattr(obj, 'model_dump'):
-        return obj.model_dump()
+        returned_data = obj.model_dump()
+        st.write(f"DEBUG: force_extract_dump returning model_dump: {returned_data}") # Debug print
+        return returned_data
     elif hasattr(obj, 'dict'):
-        return obj.dict()
+        returned_data = obj.dict()
+        st.write(f"DEBUG: force_extract_dump returning dict: {returned_data}") # Debug print
+        return returned_data
     
     # 终极兜底
-    return {"fallback_data": str(obj)}
+    returned_data = {"fallback_data": str(obj)}
+    st.write(f"DEBUG: force_extract_dump returning fallback_data: {returned_data}") # Debug print
+    return returned_data}
 
 
 # --- Page Configuration ---
@@ -1203,6 +1215,7 @@ def main():
                                     # If Pydantic object, convert to dict for storage and display
                                     if not isinstance(data, dict):
                                         data = force_extract_dump(data)
+                                        st.write(f"DEBUG: Data after force_extract_dump in main: {data}") # Debug print
                                     
                                     # Store raw text in session state as requested
                                     if "_raw_text" in data:
