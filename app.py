@@ -567,10 +567,7 @@ def main():
 
             # Simulate Premium Purchase
             if st.session_state.user and st.button("🌟 购买高级会员 (测试)"):
-                st.info(f"💡 Debug: Type of 'supabase' object: {type(supabase)}")
-                st.info(f"💡 Debug: 'grant_premium_membership' in dir(supabase): {'grant_premium_membership' in dir(supabase)}")
-                try:
-                    success, message = supabase.grant_premium_membership(
+                success, message = supabase.grant_premium_membership(
                     st.session_state.user.id,
                     st.session_state.access_token
                 )
@@ -582,8 +579,6 @@ def main():
                     st.rerun()
                 else:
                     st.error(message)
-                except AttributeError as e:
-                    st.error(f"⛔️ 严重错误：无法调用会员升级功能。请确保您已登录，并且 Supabase 配置正确。详细错误：{e}")
 
             # Handle OAuth Callback (Check if returning from Google)
             # Use query_params directly which is more robust in newer Streamlit versions
