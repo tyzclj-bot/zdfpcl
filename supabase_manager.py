@@ -241,3 +241,23 @@ class SupabaseManager:
             print(f"Error fetching admin stats: {e}")
             return None
 
+    def update_plan_status(self, user_id, new_status, access_token):
+        """Update user's plan status (e.g., 'free', 'premium', 'expired')"""
+        endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}"
+        payload = {"plan_status": new_status}
+        res = requests.patch(endpoint, json=payload, headers=self._get_headers(access_token))
+        return res.status_code == 200
+
+    def grant_premium_membership(self, user_id, access_token, initial_credits=50):
+        """Grants premium membership and initial credits upon payment"""
+        # Update plan status to 'premium'
+        if not self.update_plan_status(user_id, 'pro', access_token):
+            return False, "Failed to update plan status."
+        
+        # Add initial credits
+        if not self.add_credits(user_id, initial_credits, access_token):
+            return False, "Failed to add initial credits."
+            
+        return True, "Premium membership granted and credits added."
+
+

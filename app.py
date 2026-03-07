@@ -565,6 +565,21 @@ def main():
             #         st.error(f"⚠️ Provider Error: {st.query_params.get('error')}")
             #         st.error(f"Description: {st.query_params.get('error_description')}")
 
+            # Simulate Premium Purchase
+            if st.session_state.user and st.button("🌟 购买高级会员 (测试)"):
+                success, message = supabase.grant_premium_membership(
+                    st.session_state.user.id,
+                    st.session_state.access_token
+                )
+                if success:
+                    st.success(message)
+                    # Force refresh user profile to show updated plan and credits
+                    st.session_state.user_profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
+                    st.session_state.credits = st.session_state.user_profile['credits']
+                    st.rerun()
+                else:
+                    st.error(message)
+
             # Handle OAuth Callback (Check if returning from Google)
             # Use query_params directly which is more robust in newer Streamlit versions
             if 'code' in st.query_params:
