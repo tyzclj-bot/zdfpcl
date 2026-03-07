@@ -578,7 +578,7 @@ def main():
                     st.session_state.credits = st.session_state.user_profile['credits']
                     st.rerun()
                 else:
-                    st.error(message)
+                    st.error(f"会员购买失败：{{message}}")
 
             # Handle OAuth Callback (Check if returning from Google)
             # Use query_params directly which is more robust in newer Streamlit versions

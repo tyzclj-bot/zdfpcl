@@ -200,7 +200,13 @@ class SupabaseManager:
         endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}"
         payload = {"credits_remaining": current + amount}
         res = requests.patch(endpoint, json=payload, headers=self._get_headers(access_token))
-        return res.status_code == 200
+        if res.status_code == 200:
+            print(f"DEBUG: Supabase add_credits successful. Status: {res.status_code}")
+            return True, "积分添加成功。"
+        else:
+            error_message = res.text
+            print(f"DEBUG: Supabase add_credits failed. Status: {res.status_code}, Response: {error_message}")
+            return False, f"积分添加失败：{res.status_code} - {error_message}"
 
     def log_invoice(self, user_id, invoice_data, access_token):
         """Log the successful extraction to history"""
@@ -246,18 +252,28 @@ class SupabaseManager:
         endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}"
         payload = {"plan_status": new_status}
         res = requests.patch(endpoint, json=payload, headers=self._get_headers(access_token))
-        return res.status_code == 200
+        
+        if res.status_code == 200:
+            print(f"DEBUG: Supabase update_plan_status successful. Status: {res.status_code}")
+            return True, "计划状态更新成功。"
+        else:
+            error_message = res.text
+            print(f"DEBUG: Supabase update_plan_status failed. Status: {res.status_code}, Response: {error_message}")
+            return False, f"计划状态更新失败：{res.status_code} - {error_message}"
+
 
     def grant_premium_membership(self, user_id, access_token, initial_credits=50):
         """Grants premium membership and initial credits upon payment"""
-        # Update plan status to 'premium'
-        if not self.update_plan_status(user_id, 'pro', access_token):
-            return False, "Failed to update plan status."
+        # Update plan status to 'pro'
+        success, message = self.update_plan_status(user_id, 'pro', access_token)
+        if not success:
+            return False, message
         
         # Add initial credits
-        if not self.add_credits(user_id, initial_credits, access_token):
-            return False, "Failed to add initial credits."
+        success, message = self.add_credits(user_id, initial_credits, access_token)
+        if not success:
+            return False, message
             
-        return True, "Premium membership granted and credits added."
+        return True, "高级会员已成功开通，并已添加积分。"
 
 
