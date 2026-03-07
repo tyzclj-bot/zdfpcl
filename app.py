@@ -1371,6 +1371,7 @@ def main():
 
                     if dev_mode:
                         with tab2:
+                            pass
 
                         
                         with tab3:
