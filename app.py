@@ -1286,10 +1286,7 @@ def main():
                     if not isinstance(data, dict):
                         data = {}
                     
-                    # 🔦 终极照妖镜：把字典原形毕露地打印在前端页面上！
-                    st.info("👇 [内部调试] 真实提取到的底层字典数据如下 👇")
-                    st.json(data)
-                    st.info("👆 [内部调试] 结束 👆")
+
                     # --------------------------------------------------------
                     if data.get("warning"):
                         st.warning(f"⚠️ **Smart Audit Report:** {data.get('warning')}")
@@ -1374,7 +1371,7 @@ def main():
 
                     if dev_mode:
                         with tab2:
-                            st.json(data)
+
                         
                         with tab3:
                             st.subheader("Raw Extracted Text (OCR Output)")
