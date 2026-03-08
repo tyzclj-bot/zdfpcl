@@ -567,20 +567,23 @@ def main():
             #         st.error(f"⚠️ Provider Error: {st.query_params.get('error')}")
             #         st.error(f"Description: {st.query_params.get('error_description')}")
 
-            # Simulate Premium Purchase
+            # Simulate Premium Purchase (测试)
             if st.session_state.user and st.button("🌟 购买高级会员 (测试)"):
-                success, message = supabase.grant_premium_membership(
-                    st.session_state.user.id,
-                    st.session_state.access_token
-                )
-                if success:
-                    st.success(message)
-                    # Force refresh user profile to show updated plan and credits
-                    st.session_state.user_profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
-                    st.session_state.credits = st.session_state.user_profile['credits']
-                    st.rerun()
-                else:
-                    st.error(f"会员购买失败：{message}")
+                try:
+                    success, message = supabase.grant_premium_membership(
+                        st.session_state.user.id,
+                        st.session_state.access_token
+                    )
+                    if success:
+                        st.success(message)
+                        st.session_state.user_profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
+                        st.session_state.credits = st.session_state.user_profile['credits']
+                        st.rerun()
+                    else:
+                        st.error("操作失败，请稍后重试")
+                except Exception as e:
+                    print(f"[grant_premium_membership] {e}")
+                    st.error("操作失败，请稍后重试")
 
             # Handle OAuth Callback (Check if returning from Google)
             # Use query_params directly which is more robust in newer Streamlit versions
@@ -694,71 +697,56 @@ def main():
                     else:
                         st.session_state.is_pro = False
                 
-                # Credits Display with Top Up
-                c1, c2 = st.columns([2, 1])
-                with c1:
-                    st.metric("Credits", st.session_state.credits)
-                with c2:
-                    if plan_status == 'pro':
-                         st.markdown('<span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">PRO</span>', unsafe_allow_html=True)
-                    else:
-                         st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
-
-                # Pro 秘钥绑定
+                # --- 智能动态 UI：is_pro 时仅显示优雅 Pro 状态，否则显示购买与秘钥 ---
                 if st.session_state.is_pro:
-                    st.success("✅ Pro 订阅已激活")
+                    # Pro 用户：只显示头像、邮箱、Pro 徽章
+                    st.markdown("""
+                        <div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); padding: 0.75rem 1rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                            <span style="font-size: 1rem; font-weight: 600; color: #166534;">✅ Pro 订阅已激活</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    st.caption(f"Credits: {st.session_state.credits}")
                 else:
+                    # 非 Pro：显示 Credits、秘钥输入、购买按钮
+                    c1, c2 = st.columns([2, 1])
+                    with c1:
+                        st.metric("Credits", st.session_state.credits)
+                    with c2:
+                        st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
+
                     license_input = st.text_input("Enter Gumroad License Key", key="gumroad_license_input", placeholder="粘贴购买后收到的秘钥")
                     if st.button("Verify", key="verify_license_btn"):
                         if license_input and license_input.strip():
                             valid, msg = verify_gumroad_license(license_input)
                             if valid:
-                                success, save_msg = supabase.save_license_key(st.session_state.user.id, license_input, st.session_state.access_token)
-                                if success:
-                                    st.session_state.is_pro = True
-                                    st.success(save_msg)
-                                    st.rerun()
-                                else:
-                                    st.error(save_msg)
+                                try:
+                                    success, save_msg = supabase.save_license_key(st.session_state.user.id, license_input, st.session_state.access_token)
+                                    if success:
+                                        st.session_state.is_pro = True
+                                        st.success(save_msg)
+                                        st.rerun()
+                                    else:
+                                        st.error("保存失败，请稍后重试")
+                                except Exception as e:
+                                    print(f"[save_license_key] {e}")
+                                    st.error("保存失败，请稍后重试")
                             else:
                                 st.error(msg)
                         else:
                             st.error("请输入秘钥")
 
-                if st.session_state.credits <= 0:
-                    st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
-                    # Lemon Squeezy Checkout URL
-                    gumroad_pro_url = "https://tyzclj.gumroad.com/l/quickbills"
-                    st.link_button("🚀 Upgrade to Pro - $19.99", gumroad_pro_url, type="primary", use_container_width=True)
-                
-                # Upgrade/Top Up Button (Sidebar always shows if not pro)
-                if plan_status != 'pro':
-                    # Lemon Squeezy Checkout URL
+                    if st.session_state.credits <= 0:
+                        st.warning("⚠️ **Out of Credits:** 请升级 Pro 以继续解析发票。")
+
                     checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
-                    html_button = f"""
+                    st.markdown(f"""
                         <a href="{checkout_url}" target="_blank" style="
-                            display: inline-flex;
-                            align-items: center;
-                            justify-content: center;
-                            background-color: #FF4B4B; /* Streamlit's default primary button color */
-                            color: white;
-                            font-weight: bold;
-                            padding: 0.75rem 1.25rem;
-                            border-radius: 0.5rem;
-                            text-decoration: none;
-                            font-size: 1rem;
-                            width: 100%;
-                            box-sizing: border-box;
-                            transition: background-color 0.2s;
-                        ">
-                            ✨ Subscribe to Pro - $19.99/mo
-                        </a>
-                    """
-                    st.markdown(html_button, unsafe_allow_html=True)
-                    st.markdown("""
-                        <div class="secure-badge">
-                            <span>🔒 Secured by Gumroad</span>
-                        </div>
+                            display: inline-flex; align-items: center; justify-content: center;
+                            background-color: #FF4B4B; color: white; font-weight: bold;
+                            padding: 0.75rem 1.25rem; border-radius: 0.5rem; text-decoration: none;
+                            font-size: 1rem; width: 100%; box-sizing: border-box;
+                        ">✨ Subscribe to Pro - $19.99/mo</a>
+                        <div style="text-align: center; font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">🔒 Secured by Gumroad</div>
                     """, unsafe_allow_html=True)
 
                 # --- Reddit Promo Section ---
@@ -766,17 +754,21 @@ def main():
                     promo_code = st.text_input("Enter Promo Code", key="reddit_promo")
                     if st.button("Claim Credits"):
                         if promo_code.strip().upper() == "REDDIT2024":
-                            # Check if already redeemed (simple session check for now)
-                            # Ideally check DB user_metadata
-                            if hasattr(supabase, 'add_credits'):
-                                if supabase.add_credits(st.session_state.user.id, 5, st.session_state.access_token):
-                                    st.toast("Success! +5 Credits Added", icon="🎉")
-                                    time.sleep(1)
-                                    st.rerun()
+                            try:
+                                if hasattr(supabase, 'add_credits'):
+                                    result = supabase.add_credits(st.session_state.user.id, 5, st.session_state.access_token)
+                                    ok = result[0] if isinstance(result, tuple) else result
+                                    if ok:
+                                        st.toast("Success! +5 Credits Added", icon="🎉")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    else:
+                                        st.error("领取失败，请稍后重试")
                                 else:
-                                    st.error("Failed to add credits.")
-                            else:
-                                st.warning("Please redeploy app to enable this feature.")
+                                    st.warning("Please redeploy app to enable this feature.")
+                            except Exception as e:
+                                print(f"[add_credits Reddit] {e}")
+                                st.error("领取失败，请稍后重试")
                         else:
                             st.error("Invalid Code")
 
@@ -796,12 +788,16 @@ def main():
                     
                     # Auto Top-up for Admin if low credits
                     if st.session_state.credits < 10:
-                        if hasattr(supabase, 'add_credits'):
-                            # Add 100 credits
-                            supabase.add_credits(st.session_state.user.id, 100, st.session_state.access_token)
-                            st.session_state.credits += 100
-                            st.toast("Admin Auto-Topup: +100 Credits", icon="⚡")
-                            st.rerun()
+                        try:
+                            if hasattr(supabase, 'add_credits'):
+                                result = supabase.add_credits(st.session_state.user.id, 100, st.session_state.access_token)
+                                ok = result[0] if isinstance(result, tuple) else result
+                                if ok:
+                                    st.session_state.credits += 100
+                                    st.toast("Admin Auto-Topup: +100 Credits", icon="⚡")
+                                    st.rerun()
+                        except Exception as e:
+                            print(f"[admin add_credits] {e}")
 
                     if hasattr(supabase, 'get_admin_stats'):
                         admin_stats = supabase.get_admin_stats(st.session_state.access_token)
