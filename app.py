@@ -64,7 +64,7 @@ def force_extract_dump(obj):
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="AI Invoice Parser - QuickBooks Automation & Email to Bill",
+    page_title="QuickBills AI - Smart Invoice Parser",
     page_icon="🧾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -73,7 +73,7 @@ st.set_page_config(
 # --- SEO Metadata Injection ---
 st.markdown("""
     <script>
-    document.title = "AI Invoice Parser - QuickBooks Automation & Email to Bill";
+    document.title = "QuickBills AI - Smart Invoice Parser";
     var meta = document.createElement('meta');
     meta.name = "description";
     meta.content = "Automate your bookkeeping with AI Invoice Parser. Seamlessly sync PDF invoices to QuickBooks Online. The best Email to Bill solution for small businesses.";
@@ -541,6 +541,7 @@ def main():
 
     # --- Sidebar: Auth & Settings ---
     with st.sidebar:
+        st.title("QuickBills AI")
         st.header("Authorization")
         
         supabase = init_supabase()
