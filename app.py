@@ -12,7 +12,7 @@ load_dotenv()
 
 from invoice_extractor import AIInvoiceExtractor, InvoiceData
 from quickbooks_adapter import QuickBooksAdapter
-from supabase_manager import SupabaseManager
+from supabase_manager import SupabaseManager, verify_gumroad_license
 from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
 
@@ -536,6 +536,8 @@ def main():
         st.session_state.access_token = None
     if 'credits' not in st.session_state:
         st.session_state.credits = 0
+    if 'is_pro' not in st.session_state:
+        st.session_state.is_pro = False
 
     # --- Sidebar: Auth & Settings ---
     with st.sidebar:
@@ -681,6 +683,17 @@ def main():
                 st.session_state.credits = profile.get("credits", 0)
                 plan_status = profile.get("plan", "free")
                 
+                # Pro 订阅：基于 Gumroad 秘钥（Admin 免验证）
+                if st.session_state.user.email == ADMIN_EMAIL:
+                    st.session_state.is_pro = True
+                else:
+                    license_key = profile.get("license_key")
+                    if license_key:
+                        valid, _ = verify_gumroad_license(license_key)
+                        st.session_state.is_pro = valid
+                    else:
+                        st.session_state.is_pro = False
+                
                 # Credits Display with Top Up
                 c1, c2 = st.columns([2, 1])
                 with c1:
@@ -690,6 +703,27 @@ def main():
                          st.markdown('<span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">PRO</span>', unsafe_allow_html=True)
                     else:
                          st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
+
+                # Pro 秘钥绑定
+                if st.session_state.is_pro:
+                    st.success("✅ Pro 订阅已激活")
+                else:
+                    license_input = st.text_input("Enter Gumroad License Key", key="gumroad_license_input", placeholder="粘贴购买后收到的秘钥")
+                    if st.button("Verify", key="verify_license_btn"):
+                        if license_input and license_input.strip():
+                            valid, msg = verify_gumroad_license(license_input)
+                            if valid:
+                                success, save_msg = supabase.save_license_key(st.session_state.user.id, license_input, st.session_state.access_token)
+                                if success:
+                                    st.session_state.is_pro = True
+                                    st.success(save_msg)
+                                    st.rerun()
+                                else:
+                                    st.error(save_msg)
+                            else:
+                                st.error(msg)
+                        else:
+                            st.error("请输入秘钥")
 
                 if st.session_state.credits <= 0:
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
@@ -751,6 +785,7 @@ def main():
                     st.session_state.user = None
                     st.session_state.access_token = None
                     st.session_state.credits = 0
+                    st.session_state.is_pro = False
                     st.rerun()
 
                 # --- ADMIN DASHBOARD (Sidebar) ---
@@ -1167,7 +1202,10 @@ def main():
                     else:
                         st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
 
-                    if st.button("🤖 Process with AI"):
+                    process_disabled = not st.session_state.get("is_pro", False)
+                    if process_disabled:
+                        st.warning("🔒 请在侧边栏输入 Gumroad Pro 秘钥以解锁 AI 解析")
+                    if st.button("🤖 Process with AI", disabled=process_disabled):
                         # Double check credits before processing
                         supabase = init_supabase()
                         credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)

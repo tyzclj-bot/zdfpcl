@@ -4,7 +4,43 @@ import json
 import secrets
 import hashlib
 import base64
+from datetime import datetime, timezone
 from urllib.parse import urlencode
+
+GUMROAD_VERIFY_URL = "https://api.gumroad.com/v2/licenses/verify"
+GUMROAD_PRODUCT = "quickbills"
+
+
+def verify_gumroad_license(license_key):
+    """
+    调用 Gumroad API 验证秘钥。
+    有效条件：success=True 且 (subscription_ended_at 为空 或 未过期)
+    返回 (is_valid: bool, message: str)
+    """
+    if not license_key or not str(license_key).strip():
+        return False, "秘钥不能为空"
+    key = str(license_key).strip()
+    try:
+        resp = requests.post(
+            GUMROAD_VERIFY_URL,
+            data={"product_permalink": GUMROAD_PRODUCT, "license_key": key},
+            timeout=10,
+        )
+        data = resp.json() if resp.text else {}
+    except Exception as e:
+        return False, f"验证请求失败: {e}"
+    if not data.get("success"):
+        return False, data.get("message", "秘钥无效")
+    sub_end = data.get("subscription_ended_at")
+    if sub_end:
+        try:
+            end_dt = datetime.fromisoformat(sub_end.replace("Z", "+00:00"))
+            if end_dt.timestamp() < datetime.now(timezone.utc).timestamp():
+                return False, "订阅已过期"
+        except Exception:
+            return False, "订阅状态解析失败"
+    return True, "验证成功"
+
 
 class SupabaseManager:
     def __init__(self, url: str, key: str):
@@ -167,8 +203,8 @@ class SupabaseManager:
             return 0
 
     def get_user_profile(self, user_id, access_token):
-        """Get full profile including credits and plan"""
-        endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}&select=credits_remaining,plan_status"
+        """Get full profile including credits, plan, and license_key"""
+        endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}&select=credits_remaining,plan_status,license_key"
         try:
             response = requests.get(endpoint, headers=self._get_headers(access_token))
             if response.status_code == 200:
@@ -176,12 +212,41 @@ class SupabaseManager:
                 if data and len(data) > 0:
                     return {
                         "credits": data[0].get('credits_remaining', 0),
-                        "plan": data[0].get('plan_status', 'free')
+                        "plan": data[0].get('plan_status', 'free'),
+                        "license_key": data[0].get('license_key') or None,
                     }
-            return {"credits": 0, "plan": "free"}
+            if response.status_code == 400:
+                fallback = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}&select=credits_remaining,plan_status"
+                r = requests.get(fallback, headers=self._get_headers(access_token))
+                if r.status_code == 200 and r.json():
+                    d = r.json()[0]
+                    return {"credits": d.get('credits_remaining', 0), "plan": d.get('plan_status', 'free'), "license_key": None}
+            return {"credits": 0, "plan": "free", "license_key": None}
         except Exception as e:
             print(f"Error fetching profile: {e}")
-            return {"credits": 0, "plan": "free"}
+            return {"credits": 0, "plan": "free", "license_key": None}
+
+    def get_user_license_key(self, user_id, access_token):
+        """获取用户绑定的 Gumroad 秘钥"""
+        profile = self.get_user_profile(user_id, access_token)
+        return profile.get("license_key")
+
+    def save_license_key(self, user_id, license_key, access_token):
+        """将有效的 Gumroad 秘钥保存到当前用户的 Supabase 记录"""
+        headers = self._get_headers(access_token)
+        endpoint = f"{self.url}/rest/v1/user_credits"
+        patch_endpoint = f"{endpoint}?user_id=eq.{user_id}"
+        payload = {"license_key": license_key.strip(), "plan_status": "pro"}
+        patch_res = requests.patch(patch_endpoint, json=payload, headers=headers)
+        if patch_res.status_code in (200, 204):
+            return True, "秘钥已绑定"
+        if patch_res.status_code == 404 or (patch_res.status_code == 204 and not patch_res.content):
+            insert_payload = {"user_id": user_id, "license_key": license_key.strip(), "plan_status": "pro", "credits_remaining": 5}
+            insert_res = requests.post(endpoint, json=insert_payload, headers=headers)
+            if insert_res.status_code in (200, 201):
+                return True, "秘钥已绑定"
+            return False, insert_res.text or "保存失败"
+        return False, patch_res.text or "保存失败"
 
     def decrement_credits(self, user_id, access_token):
         """Decrement 1 credit from user"""
@@ -248,18 +313,35 @@ class SupabaseManager:
             return None
 
     def update_plan_status(self, user_id, new_status, access_token):
-        """Update user's plan status (e.g., 'free', 'premium', 'expired')"""
-        endpoint = f"{self.url}/rest/v1/user_credits?user_id=eq.{user_id}"
+        """Update user's plan status (e.g., 'free', 'pro', 'expired') or create if not exists"""
+        headers = self._get_headers(access_token)
+        endpoint = f"{self.url}/rest/v1/user_credits"
+
+        # Attempt to PATCH (update) existing record
+        patch_endpoint = f"{endpoint}?user_id=eq.{user_id}"
         payload = {"plan_status": new_status}
-        res = requests.patch(endpoint, json=payload, headers=self._get_headers(access_token))
-        
-        if res.status_code == 200:
-            print(f"DEBUG: Supabase update_plan_status successful. Status: {res.status_code}")
+        patch_res = requests.patch(patch_endpoint, json=payload, headers=headers)
+
+        if patch_res.status_code == 200:
+            print(f"DEBUG: Supabase update_plan_status (PATCH) successful. Status: {patch_res.status_code}")
             return True, "计划状态更新成功。"
-        else:
-            error_message = res.text
-            print(f"DEBUG: Supabase update_plan_status failed. Status: {res.status_code}, Response: {error_message}")
-            return False, f"计划状态更新失败：{res.status_code} - {error_message}"
+        elif patch_res.status_code == 204: # No content, likely no row to update, so try to insert
+            print(f"DEBUG: Supabase update_plan_status (PATCH) received 204. No existing record for user_id {user_id}. Attempting INSERT.")
+            # Attempt to POST (insert) new record
+            insert_payload = {"user_id": user_id, "plan_status": new_status, "credits_remaining": 0} # Default credits to 0, will be added by add_credits later
+            insert_res = requests.post(endpoint, json=insert_payload, headers=headers)
+
+            if insert_res.status_code == 201: # 201 Created for successful insert
+                print(f"DEBUG: Supabase update_plan_status (INSERT) successful. Status: {insert_res.status_code}")
+                return True, "用户信用记录创建并计划状态更新成功。"
+            else:
+                error_message = insert_res.text
+                print(f"DEBUG: Supabase update_plan_status (INSERT) failed. Status: {insert_res.status_code}, Response: {error_message}")
+                return False, f"用户信用记录创建失败：{insert_res.status_code} - {error_message}"
+        else: # General PATCH failure
+            error_message = patch_res.text
+            print(f"DEBUG: Supabase update_plan_status (PATCH) failed. Status: {patch_res.status_code}, Response: {error_message}")
+            return False, f"计划状态更新失败：{patch_res.status_code} - {error_message}"
 
 
     def grant_premium_membership(self, user_id, access_token, initial_credits=50):
