@@ -64,7 +64,7 @@ def force_extract_dump(obj):
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="QuickBills AI - Smart Invoice Parser",
+    page_title="QuickBills AI",
     page_icon="🧾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -73,7 +73,7 @@ st.set_page_config(
 # --- SEO Metadata Injection ---
 st.markdown("""
     <script>
-    document.title = "QuickBills AI - Smart Invoice Parser";
+    document.title = "QuickBills AI";
     var meta = document.createElement('meta');
     meta.name = "description";
     meta.content = "Automate your bookkeeping with AI Invoice Parser. Seamlessly sync PDF invoices to QuickBooks Online. The best Email to Bill solution for small businesses.";
@@ -506,6 +506,10 @@ def main():
             show_contact_page()
             return
 
+    # --- App Title (Google OAuth Review Requirement) ---
+    st.title("QuickBills AI")
+    st.caption("AI-powered invoice parsing and auditing tool for Bookkeepers.")
+
     # --- Custom Header (SaaS Look) ---
     st.markdown("""
         <div class="custom-header">
@@ -846,6 +850,14 @@ def main():
                         <span>🔒 Secured by Gumroad</span>
                     </div>
                 """, unsafe_allow_html=True)
+
+                # --- Legal footer (Google OAuth Review Requirement) ---
+                st.markdown(
+                    'By using QuickBills AI, you agree to our '
+                    '[Privacy Policy](https://flowery-tin-466.notion.site/QuickBills-AI-Legal-Center-31d603d9e4da800f8602fe8323638b81?pvs=143)'
+                    ' & '
+                    '[Terms](https://flowery-tin-466.notion.site/Terms-of-Service-for-QuickBills-AI-31d603d9e4da8060b194c1adf99f459c?pvs=143).'
+                )
 
         st.divider()
         
