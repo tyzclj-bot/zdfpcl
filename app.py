@@ -567,24 +567,6 @@ def main():
             #         st.error(f"⚠️ Provider Error: {st.query_params.get('error')}")
             #         st.error(f"Description: {st.query_params.get('error_description')}")
 
-            # Simulate Premium Purchase (测试)
-            if st.session_state.user and st.button("🌟 购买高级会员 (测试)"):
-                try:
-                    success, message = supabase.grant_premium_membership(
-                        st.session_state.user.id,
-                        st.session_state.access_token
-                    )
-                    if success:
-                        st.success(message)
-                        st.session_state.user_profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
-                        st.session_state.credits = st.session_state.user_profile['credits']
-                        st.rerun()
-                    else:
-                        st.error("操作失败，请稍后重试")
-                except Exception as e:
-                    print(f"[grant_premium_membership] {e}")
-                    st.error("操作失败，请稍后重试")
-
             # Handle OAuth Callback (Check if returning from Google)
             # Use query_params directly which is more robust in newer Streamlit versions
             if 'code' in st.query_params:
@@ -669,61 +651,37 @@ def main():
                 full_name = user_meta.get('full_name') or user_meta.get('name') or st.session_state.user.email.split('@')[0]
                 user_email = st.session_state.user.email
                 
-                # Masked ID (e.g., user_123...456)
-                masked_id = f"ID: {st.session_state.user.id[:8]}...{st.session_state.user.id[-4:]}"
-                
-                # --- Account Card ---
+                # --- Account Card: 头像 + 邮箱 ---
                 st.markdown(f"""
                     <div class="account-card">
                         <img src="{avatar_url if avatar_url else 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}" class="user-avatar">
                         <div style="font-weight: 600; color: #1e293b;">{full_name}</div>
-                        <div class="user-id">{masked_id}</div>
+                        <div class="user-id">{user_email}</div>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Fetch fresh credits and plan
                 profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
                 st.session_state.credits = profile.get("credits", 0)
-                plan_status = profile.get("plan", "free")
-                
-                # Pro 订阅：基于 Gumroad 秘钥（Admin 免验证）
                 if st.session_state.user.email == ADMIN_EMAIL:
                     st.session_state.is_pro = True
                 else:
                     license_key = profile.get("license_key")
-                    if license_key:
-                        valid, _ = verify_gumroad_license(license_key)
-                        st.session_state.is_pro = valid
-                    else:
-                        st.session_state.is_pro = False
+                    st.session_state.is_pro = bool(license_key and verify_gumroad_license(license_key)[0])
                 
-                # --- 智能动态 UI：is_pro 时仅显示优雅 Pro 状态，否则显示购买与秘钥 ---
+                # --- 状态 A：Pro | 状态 B：非 Pro（严格隔离）---
                 if st.session_state.is_pro:
-                    # Pro 用户：只显示头像、邮箱、Pro 徽章
-                    st.markdown("""
-                        <div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); padding: 0.75rem 1rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
-                            <span style="font-size: 1rem; font-weight: 600; color: #166534;">✅ Pro 订阅已激活</span>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    st.caption(f"Credits: {st.session_state.credits}")
+                    st.success("✅ Pro 订阅已激活")
                 else:
-                    # 非 Pro：显示 Credits、秘钥输入、购买按钮
-                    c1, c2 = st.columns([2, 1])
-                    with c1:
-                        st.metric("Credits", st.session_state.credits)
-                    with c2:
-                        st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
-
-                    license_input = st.text_input("Enter Gumroad License Key", key="gumroad_license_input", placeholder="粘贴购买后收到的秘钥")
+                    st.link_button("🌟 Upgrade to Pro - $19.99/mo", "https://tyzclj.gumroad.com/l/quickbills", use_container_width=True)
+                    license_input = st.text_input("Enter your Gumroad License Key", key="gumroad_license_input", type="password")
                     if st.button("Verify", key="verify_license_btn"):
                         if license_input and license_input.strip():
                             valid, msg = verify_gumroad_license(license_input)
                             if valid:
                                 try:
-                                    success, save_msg = supabase.save_license_key(st.session_state.user.id, license_input, st.session_state.access_token)
+                                    success, _ = supabase.save_license_key(st.session_state.user.id, license_input, st.session_state.access_token)
                                     if success:
                                         st.session_state.is_pro = True
-                                        st.success(save_msg)
                                         st.rerun()
                                     else:
                                         st.error("保存失败，请稍后重试")
@@ -734,20 +692,6 @@ def main():
                                 st.error(msg)
                         else:
                             st.error("请输入秘钥")
-
-                    if st.session_state.credits <= 0:
-                        st.warning("⚠️ **Out of Credits:** 请升级 Pro 以继续解析发票。")
-
-                    checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
-                    st.markdown(f"""
-                        <a href="{checkout_url}" target="_blank" style="
-                            display: inline-flex; align-items: center; justify-content: center;
-                            background-color: #FF4B4B; color: white; font-weight: bold;
-                            padding: 0.75rem 1.25rem; border-radius: 0.5rem; text-decoration: none;
-                            font-size: 1rem; width: 100%; box-sizing: border-box;
-                        ">✨ Subscribe to Pro - $19.99/mo</a>
-                        <div style="text-align: center; font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">🔒 Secured by Gumroad</div>
-                    """, unsafe_allow_html=True)
 
                 # --- Reddit Promo Section ---
                 with st.expander("🎁 Reddit Exclusive"):
