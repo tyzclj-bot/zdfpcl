@@ -483,7 +483,6 @@ def show_contact_page():
         go_home()
 
 # --- App Logic ---
-FIXED_VERIFIER = "v1_persistent_verifier_fix_zdfpcl_2025"
 ADMIN_EMAIL = "tyzclj@gmail.com"
 
 def main():
@@ -545,109 +544,16 @@ def main():
             if st.button("Save Settings"):
                 st.rerun()
         else:
-            # --- DEBUG SECTION ---
-            # Remove this in production once fixed
-            # with st.expander("🔧 Connection Debugger", expanded=True):
-            #     st.write("Current URL Parameters:")
-            #     st.json(dict(st.query_params))
-            #     
-            #     if 'code' in st.query_params:
-            #         st.success("✅ Auth Code Detected!")
-            #     else:
-            #         st.info("ℹ️ No Auth Code in URL")
-            #         
-            #     if 'error' in st.query_params:
-            #         st.error(f"⚠️ Provider Error: {st.query_params.get('error')}")
-            #         st.error(f"Description: {st.query_params.get('error_description')}")
-
-            # Handle OAuth Callback (Check if returning from Google)
-            # Use query_params directly which is more robust in newer Streamlit versions
-            if 'code' in st.query_params:
-                # --- FIX: Handle Browser Back Button ---
-                # If user is already logged in, ignore the code (it might be old/used)
-                # and just clean the URL to prevent "Invalid Grant" errors or UI stutter.
-                if st.session_state.user is not None:
-                    st.query_params.clear()
-                    st.rerun()
-
-                code = st.query_params['code']
-                
-                # Attempt to retrieve verifier from state (Stateless) or Session (Stateful)
-                verifier = None
-                
-                # 1. Try State (Simplified: State IS the verifier)
-                if 'state' in st.query_params:
-                    verifier = st.query_params['state']
-                
-                # 2. Fallback to Session State
-                if not verifier:
-                    verifier = st.session_state.get('oauth_verifier')
-
-                # 3. Fallback to Fixed Verifier (Production Stability)
-                if not verifier:
-                    verifier = FIXED_VERIFIER
-                
-                if verifier:
-                    try:
-                        with st.spinner("Logging in with Google..."):
-                            res = supabase.exchange_code_for_session(code, verifier)
-                            if res and res.user:
-                                st.session_state.user = res.user
-                                st.session_state.access_token = res.session.access_token
-                                
-                                # Clean up - CRITICAL: Clear query params to prevent loop
-                                st.query_params.clear()
-                                # del st.session_state.oauth_verifier
-                                
-                                st.success("Logged in with Google successfully!")
-                                
-                                # Auto-redirect
-                                time.sleep(0.5) 
-                                st.rerun()
-                    except Exception as e:
-                        # Improved Error Logging
-                        st.error(f"Google Login failed: {str(e)}")
-                        # Debug info for the user to help troubleshoot
-                        with st.expander("Troubleshooting Info"):
-                            st.write(f"Verifier present: {bool(verifier)}")
-                            st.write(f"Code present: {bool(code)}")
-                            if hasattr(e, 'response'):
-                                st.write(f"Response: {e.response.text}")
-                                
-                        # Clear params to avoid loop even on error
-                        st.query_params.clear()
-                        # Optional: Wait a bit so user sees the error
-                        time.sleep(5) # Increase wait time to read error
-                        st.rerun()
-                else:
-                    # Case: We have a code but no verifier. 
-                    # This happens if session state was lost (e.g. cross-device or browser privacy settings)
-                    # Or simply a refresh on the callback URL.
-                    st.warning("Session expired or invalid. Please try logging in again.")
-                    # Debug Info
-                    with st.expander("Debug Details"):
-                        st.write("Reason: OAuth Verifier missing from session and state.")
-                        st.write("Please ensure cookies are enabled and you are not in Incognito mode causing state loss.")
-                    
-                    st.query_params.clear()
-                    if st.button("Retry Login"):
-                        st.rerun()
-            
-            # If User is Logged In
-            # FORCE RE-CHECK of Session State if needed
             if st.session_state.user:
-                # Display Avatar if available
-                user_meta = getattr(st.session_state.user, 'user_metadata', {})
-                
-                # Google often uses 'picture' instead of 'avatar_url'
-                avatar_url = user_meta.get('avatar_url') or user_meta.get('picture')
-                full_name = user_meta.get('full_name') or user_meta.get('name') or st.session_state.user.email.split('@')[0]
                 user_email = st.session_state.user.email
+                user_meta = getattr(st.session_state.user, 'user_metadata', {}) or {}
+                avatar_url = user_meta.get('avatar_url') or user_meta.get('picture')
+                full_name = user_meta.get('full_name') or user_meta.get('name') or user_email.split('@')[0]
                 
-                # --- Account Card: 头像 + 邮箱 ---
+                st.success(f"Logged in as {user_email}")
                 st.markdown(f"""
                     <div class="account-card">
-                        <img src="{avatar_url if avatar_url else 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}" class="user-avatar">
+                        <img src="{avatar_url or 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}" class="user-avatar">
                         <div style="font-weight: 600; color: #1e293b;">{full_name}</div>
                         <div class="user-id">{user_email}</div>
                     </div>
@@ -744,69 +650,44 @@ def main():
                         st.info("Admin stats module not loaded.")
 
             else:
-                # --- Login / Register Buttons ---
-                st.info("Log in to start automating your invoices.")
-                
-                # Google Login (Primary)
-                try:
-                    # Using FIXED_VERIFIER for stability
-                    redirect_url = "https://quickbills-ai.streamlit.app" 
-                    auth_url = supabase.get_google_auth_url(redirect_url, FIXED_VERIFIER)
-                    
-                    # Use HTML button to force target="_self" (prevent opening new tab)
-                    st.markdown(f"""
-                        <a href="{auth_url}" target="_self" style="
-                            display: block;
-                            width: 100%;
-                            background-color: #FF4B4B;
-                            color: white;
-                            text-align: center;
-                            padding: 0.5rem 0.75rem;
-                            border-radius: 0.5rem;
-                            text-decoration: none;
-                            font-weight: 600;
-                            border: 1px solid #FF4B4B;
-                            line-height: 1.6;
-                            font-family: 'Source Sans Pro', sans-serif;
-                            margin-top: 0px;
-                        ">
-                            Continue with Google
-                        </a>
-                    """, unsafe_allow_html=True)
-                    # st.link_button("Continue with Google", auth_url, type="primary", use_container_width=True)
-                except Exception as e:
-                    st.error(f"Auth Error: {e}")
-                
-                st.markdown("""
-                    <div style="text-align: center; margin: 1rem 0; color: #64748b; font-size: 0.9rem;">
-                        OR
-                    </div>
-                """, unsafe_allow_html=True)
-
-                # Email Login (Secondary)
-                with st.expander("Continue with Email"):
-                    email = st.text_input("Email Address")
-                    password = st.text_input("Password", type="password")
-                    
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if st.button("Log In", use_container_width=True):
+                # --- Login / Sign Up Tabs ---
+                tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
+                with tab_login:
+                    login_email = st.text_input("Email", key="login_email", placeholder="you@example.com")
+                    login_password = st.text_input("Password", type="password", key="login_password")
+                    if st.button("Login", key="btn_login", type="primary", use_container_width=True):
+                        if login_email and login_password:
                             try:
-                                res = supabase.sign_in(email, password)
-                                if res and res.user:
+                                res = supabase.sign_in(login_email.strip(), login_password)
+                                if res and res.user and res.session:
                                     st.session_state.user = res.user
                                     st.session_state.access_token = res.session.access_token
                                     st.rerun()
+                                else:
+                                    st.error("Login failed. Please try again.")
                             except Exception as e:
                                 st.error(str(e))
-                    with c2:
-                        if st.button("Sign Up", use_container_width=True):
+                        else:
+                            st.error("Please enter email and password.")
+                with tab_signup:
+                    signup_email = st.text_input("Email", key="signup_email", placeholder="you@example.com")
+                    signup_password = st.text_input("Password", type="password", key="signup_password")
+                    if st.button("Sign Up", key="btn_signup", type="primary", use_container_width=True):
+                        if signup_email and signup_password:
                             try:
-                                res = supabase.sign_up(email, password)
+                                res = supabase.sign_up(signup_email.strip(), signup_password)
                                 if res and res.user:
-                                    st.success("Account created! Please check your email to confirm.")
+                                    if res.session:
+                                        st.session_state.user = res.user
+                                        st.session_state.access_token = res.session.access_token
+                                        st.success("Account created! Logging you in...")
+                                        st.rerun()
+                                    else:
+                                        st.success("Account created! Please check your email to confirm.")
                             except Exception as e:
                                 st.error(str(e))
+                        else:
+                            st.error("Please enter email and password.")
                 
                 # --- Payment for Guest Users ---
                 st.markdown("---")
