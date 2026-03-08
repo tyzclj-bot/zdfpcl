@@ -13,8 +13,10 @@ load_dotenv()
 from invoice_extractor import AIInvoiceExtractor, InvoiceData
 from quickbooks_adapter import QuickBooksAdapter
 from supabase_manager import SupabaseManager, verify_gumroad_license
-from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
 from tempfile import NamedTemporaryFile
+
+LEGAL_CENTER_URL = "https://flowery-tin-466.notion.site/QuickBills-AI-Legal-Center-31d603d9e4da800f8602fe8323638b81?pvs=143"
+TERMS_URL = "https://flowery-tin-466.notion.site/Terms-of-Service-for-QuickBills-AI-31d603d9e4da8060b194c1adf99f459c?pvs=143"
 
 def force_extract_dump(obj):
     """
@@ -353,8 +355,6 @@ def init_supabase():
         return SupabaseManager(url, key)
     return None
 
-from legal_content import PRIVACY_POLICY, TERMS_OF_SERVICE
-
 def generate_quickbooks_csv(data):
     """
     Generate CSV for QuickBooks Online Import.
@@ -452,12 +452,6 @@ def go_home():
     st.query_params.clear()
     st.rerun()
 
-def show_legal_page(title, content):
-    st.markdown(f"# {title}")
-    st.markdown(content)
-    if st.button("← Back to App"):
-        go_home()
-
 def show_contact_page():
     st.markdown("# Contact Support")
     st.markdown("""
@@ -496,13 +490,7 @@ def main():
     # --- Navigation Logic ---
     if "nav" in st.query_params:
         nav_target = st.query_params["nav"]
-        if nav_target == "privacy":
-            show_legal_page("Privacy Policy", PRIVACY_POLICY)
-            return
-        elif nav_target == "terms":
-            show_legal_page("Terms of Service", TERMS_OF_SERVICE)
-            return
-        elif nav_target == "contact":
+        if nav_target == "contact":
             show_contact_page()
             return
 
@@ -852,27 +840,7 @@ def main():
                 """, unsafe_allow_html=True)
 
                 # --- Legal footer (Google OAuth Review Requirement) ---
-                st.markdown(
-                    'By using QuickBills AI, you agree to our '
-                    '[Privacy Policy](https://flowery-tin-466.notion.site/QuickBills-AI-Legal-Center-31d603d9e4da800f8602fe8323638b81?pvs=143)'
-                    ' & '
-                    '[Terms](https://flowery-tin-466.notion.site/Terms-of-Service-for-QuickBills-AI-31d603d9e4da8060b194c1adf99f459c?pvs=143).'
-                )
-
         st.divider()
-        
-        # --- Legal Section ---
-        with st.expander("⚖️ Legal & Terms"):
-            # Use columns to avoid potential button id conflicts in sidebar
-            l1, l2 = st.columns(2)
-            with l1:
-                if st.button("Privacy", key="btn_privacy"):
-                    st.session_state.show_legal = "privacy"
-                    st.rerun()
-            with l2:
-                if st.button("Terms", key="btn_terms"):
-                    st.session_state.show_legal = "terms"
-                    st.rerun()
 
         # --- Roadmap Section (Growth Signal) ---
         st.markdown("---")
@@ -927,28 +895,6 @@ def main():
 
     # --- Main App Display ---
     
-    # Handle Legal Page Display
-    if 'show_legal' in st.session_state:
-        # Use st.empty() to clear previous content effectively if needed
-        placeholder = st.empty()
-        with placeholder.container():
-            if st.session_state.show_legal == "privacy":
-                st.title("🔒 Privacy Policy")
-                st.markdown(PRIVACY_POLICY)
-                if st.button("← Back to App", key="back_btn_privacy"):
-                    del st.session_state.show_legal
-                    st.rerun()
-                # Stop execution here so main app doesn't render
-                return
-            elif st.session_state.show_legal == "terms":
-                st.title("📜 Terms of Service")
-                st.markdown(TERMS_OF_SERVICE)
-                if st.button("← Back to App", key="back_btn_terms"):
-                    del st.session_state.show_legal
-                    st.rerun()
-                # Stop execution here so main app doesn't render
-                return
-
     # --- Hero Section (Visible to all, but styled differently if logged in?) ---
     # Actually, for a SaaS tool, the "Landing" is usually different from "Dashboard".
     # But user wants this "Homepage" look. Let's put it at the top.
@@ -1138,14 +1084,6 @@ def main():
             with st.container(border=True):
                 st.subheader("1. Upload Invoice")
                 uploaded_file = st.file_uploader("Upload Invoice", type=["pdf", "png", "jpg", "jpeg"])
-                
-                # Trust Signals
-                st.markdown("""
-                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 1rem;">
-                        <p style="margin-bottom: 0.25rem;">🛡️ 7-Day Money Back Guarantee</p>
-                        <p>🔒 Secure Payment by Lemon Squeezy</p>
-                    </div>
-                """, unsafe_allow_html=True)
 
                 if uploaded_file:
                     # Display preview based on file type
@@ -1526,10 +1464,16 @@ def main():
     # --- Global Site Footer ---
     st.markdown("""
         <div style="text-align: center; margin-top: 4rem; margin-bottom: 2rem; color: #94a3b8; font-size: 0.85rem; border-top: 1px solid #f1f5f9; padding-top: 2rem;">
-            <p style="margin-bottom: 0.5rem;">&copy; 2025 QuickBills AI. All rights reserved.</p>
+            <p style="margin-bottom: 0.5rem;">&copy; 2026 QuickBills AI. All rights reserved.</p>
+            <p style="margin: 0 0 0.75rem 0;">
+                By using QuickBills AI, you agree to our
+                <a href="https://flowery-tin-466.notion.site/QuickBills-AI-Legal-Center-31d603d9e4da800f8602fe8323638b81?pvs=143" style="color: #64748b; text-decoration: none;" target="_blank">Privacy Policy</a>
+                &amp;
+                <a href="https://flowery-tin-466.notion.site/Terms-of-Service-for-QuickBills-AI-31d603d9e4da8060b194c1adf99f459c?pvs=143" style="color: #64748b; text-decoration: none;" target="_blank">Terms</a>.
+            </p>
             <div style="display: flex; justify-content: center; gap: 1.5rem;">
-                 <a href="?nav=privacy" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Privacy Policy</a>
-                 <a href="?nav=terms" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Terms of Service</a>
+                 <a href="https://flowery-tin-466.notion.site/QuickBills-AI-Legal-Center-31d603d9e4da800f8602fe8323638b81?pvs=143" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_blank">Privacy Policy</a>
+                 <a href="https://flowery-tin-466.notion.site/Terms-of-Service-for-QuickBills-AI-31d603d9e4da8060b194c1adf99f459c?pvs=143" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_blank">Terms</a>
                  <a href="?nav=contact" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Contact Us</a>
             </div>
         </div>
