@@ -7,9 +7,6 @@ import base64
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
-GUMROAD_VERIFY_URL = "https://api.gumroad.com/v2/licenses/verify"
-PRODUCT_ID = "JvvpIoNkbT2gqFvddLeGiA=="
-
 
 def verify_gumroad_license(license_key):
     """
@@ -21,9 +18,13 @@ def verify_gumroad_license(license_key):
         return False, "秘钥不能为空"
     key = str(license_key).strip()
     try:
+        # 严格硬编码 product_id 参数，不使用 product_permalink
         resp = requests.post(
-            GUMROAD_VERIFY_URL,
-            data={"product_id": PRODUCT_ID, "license_key": key},
+            "https://api.gumroad.com/v2/licenses/verify",
+            data={
+                "product_id": "JvvpIoNkbT2gqFvddLeGiA==",
+                "license_key": key
+            },
             timeout=10,
         )
         data = resp.json() if resp.text else {}
