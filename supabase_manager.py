@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 GUMROAD_VERIFY_URL = "https://api.gumroad.com/v2/licenses/verify"
-GUMROAD_PRODUCT_ID = "JvvpIoNkbT2gqFvddLeGiA=="
+GUMROAD_PRODUCT = "quickbills"
 
 
 def verify_gumroad_license(license_key):
@@ -23,7 +23,7 @@ def verify_gumroad_license(license_key):
     try:
         resp = requests.post(
             GUMROAD_VERIFY_URL,
-            data={"product_id": GUMROAD_PRODUCT_ID, "license_key": key},
+            data={"product_permalink": GUMROAD_PRODUCT, "license_key": key},
             timeout=10,
         )
         data = resp.json() if resp.text else {}
