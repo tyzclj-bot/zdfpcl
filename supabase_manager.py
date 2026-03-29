@@ -17,7 +17,7 @@ def verify_gumroad_license(license_key):
     
     # 替换成最原始、最硬核的这两行，不要加任何其他多余的参数
     payload = {
-        "product_id": "zlpjn",
+        "product_id": "JvvpIoNkbT2gqFvddLeGiA==",
         "license_key": license_key
     }
     
