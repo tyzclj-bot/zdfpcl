@@ -1,12 +1,12 @@
 import requests 
  
 url = "https://api.gumroad.com/v2/licenses/verify" 
-key = "6F0E4C97-B72A4E69-A11BF6C4-AF6517E7"  # 这是你刚才那把绝对真实的钥匙 
+key = "DBAAB282-F75348B6-A31DAAC5-7C62BE44"  # 这是你刚才那把绝对真实的钥匙 
  
 payloads =[ 
     {"product_permalink": "quickbills-pro", "license_key": key}, 
     {"product_id": "zlpjn", "license_key": key}, 
-    {"product_id": "JvvpIoNkbT2gqFvddLeGiA==", "license_key": key} 
+    {"product_id": "2YPoqUVEGzeHGGpxmm8ktA==", "license_key": key} 
 ] 
  
 print("--- 开始终极 API 爆破测试 ---\n") 

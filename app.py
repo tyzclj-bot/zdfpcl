@@ -571,7 +571,7 @@ def main():
                 if st.session_state.is_pro:
                     st.success("✅ Pro 订阅已激活")
                 else:
-                    st.link_button("🌟 Upgrade to Pro - $19.99/mo", "https://tyzclj.gumroad.com/l/quickbills-pro", use_container_width=True)
+                    st.link_button("🌟 Upgrade to Pro - $19.99/mo", "https://tyzclj.gumroad.com/l/hrnxoe", use_container_width=True)
                     license_input = st.text_input("Enter your Gumroad License Key", key="gumroad_license_input", type="password")
                     if st.button("Verify", key="verify_license_btn"):
                         if license_input and license_input.strip():
@@ -693,7 +693,7 @@ def main():
                 st.markdown("---")
                 st.markdown("### 💎 Go Pro")
                 st.caption("Unlock unlimited processing and 24/7 support.")
-                checkout_url = "https://tyzclj.gumroad.com/l/quickbills-pro"
+                checkout_url = "https://tyzclj.gumroad.com/l/hrnxoe"
                 html_button = f"""
                     <a href="{checkout_url}" target="_blank" style="
                         display: inline-flex;
@@ -886,7 +886,7 @@ def main():
                             <span style="color: #10b981; margin-right: 0.75rem;">✔</span> 24/7 Priority Support
                         </li>
                     </ul>
-                    <a href="https://tyzclj.gumroad.com/l/quickbills-pro" target="_blank" style="
+                    <a href="https://tyzclj.gumroad.com/l/hrnxoe" target="_blank" style="
                         display: block;
                         background: #3b82f6;
                         color: white;
