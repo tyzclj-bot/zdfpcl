@@ -4,43 +4,66 @@ import json
 import secrets
 import hashlib
 import base64
+import re
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 
 def verify_gumroad_license(license_key):
     """
-    调用 Gumroad API 验证秘钥。
-    有效条件：success=True 且 (subscription_ended_at 为空 或 未过期)
-    返回 (is_valid: bool, message: str)
+    彻底重写的自愈型验证逻辑：支持自动抓取服务器返回的正确 product_id 并重试。
     """
-    if not license_key or not str(license_key).strip():
+    url = "https://api.gumroad.com/v2/licenses/verify"
+    if not license_key:
         return False, "秘钥不能为空"
-    key = str(license_key).strip()
-    try:
-        # 严格硬编码 product_id 参数，不使用 product_permalink
-        resp = requests.post(
-            "https://api.gumroad.com/v2/licenses/verify",
-            data={
-                "product_id": "JvvpIoNkbT2gqFvddLeGiA==",
-                "license_key": key
-            },
-            timeout=10,
-        )
-        data = resp.json() if resp.text else {}
-    except Exception as e:
-        return False, f"验证请求失败: {e}"
-    if not data.get("success"):
-        return False, data.get("message", "秘钥无效")
-    sub_end = data.get("subscription_ended_at")
-    if sub_end:
-        try:
-            end_dt = datetime.fromisoformat(sub_end.replace("Z", "+00:00"))
-            if end_dt.timestamp() < datetime.now(timezone.utc).timestamp():
-                return False, "订阅已过期"
-        except Exception:
-            return False, "订阅状态解析失败"
-    return True, "验证成功"
+    clean_key = str(license_key).strip() # 极其重要：清除头尾所有隐形空格 
+     
+    # 第一次尝试：使用最稳定的 permalink 盲打 
+    payload = { 
+        "product_permalink": "quickbills", # 使用你已发布产品的基础链接 
+        "license_key": clean_key 
+    } 
+     
+    try: 
+        response = requests.post(url, data=payload, timeout=10) 
+        data = response.json() 
+         
+        # 核心自愈逻辑：如果 Gumroad 报错并强制要求特定的 product_id 
+        if response.status_code == 400 and not data.get("success"): 
+            error_msg = data.get("message", "") 
+            # 用正则抓取 Gumroad 服务器动态返回的真正 ID 
+            match = re.search(r"Please set 'product_id' to '([^']+)'", error_msg) 
+             
+            if match: 
+                correct_product_id = match.group(1) 
+                print(f"[Auto-Fix] Switching to dynamic product_id: {correct_product_id}") 
+                 
+                # 拿到真正 ID 后，发起第二次精准打击 
+                retry_payload = { 
+                    "product_id": correct_product_id, 
+                    "license_key": clean_key 
+                } 
+                retry_response = requests.post(url, data=retry_payload, timeout=10) 
+                data = retry_response.json()
+        
+        # --- 统一验证数据逻辑 (保持原有接口返回格式) ---
+        if not data.get("success"):
+            return False, data.get("message", "秘钥无效")
+        
+        sub_end = data.get("subscription_ended_at")
+        if sub_end:
+            try:
+                end_dt = datetime.fromisoformat(sub_end.replace("Z", "+00:00"))
+                if end_dt.timestamp() < datetime.now(timezone.utc).timestamp():
+                    return False, "订阅已过期"
+            except Exception:
+                return False, "订阅状态解析失败"
+        
+        return True, "验证成功"
+
+    except Exception as e: 
+        print(f"Gumroad API Error: {e}") 
+        return False, f"验证请求失败: {str(e)}"
 
 
 class SupabaseManager:
