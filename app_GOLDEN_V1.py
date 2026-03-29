@@ -679,13 +679,13 @@ def main():
                 if st.session_state.credits <= 0:
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
                     # Lemon Squeezy Checkout URL
-                    gumroad_pro_url = "https://tyzclj.gumroad.com/l/quickbills"
+                    gumroad_pro_url = "https://tyzclj.gumroad.com/l/quickbills-pro"
                     st.link_button("🚀 Upgrade to Pro - $19.99", gumroad_pro_url, type="primary", use_container_width=True)
                 
                 # Upgrade/Top Up Button (Sidebar always shows if not pro)
                 if plan_status != 'pro':
                     # Lemon Squeezy Checkout URL
-                    checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
+                    checkout_url = "https://tyzclj.gumroad.com/l/quickbills-pro"
                     html_button = f"""
                         <a href="{checkout_url}" target="_blank" style="
                             display: inline-flex;
@@ -829,7 +829,7 @@ def main():
                 st.markdown("---")
                 st.markdown("### 💎 Go Pro")
                 st.caption("Unlock unlimited processing and 24/7 support.")
-                checkout_url = "https://tyzclj.gumroad.com/l/quickbills"
+                checkout_url = "https://tyzclj.gumroad.com/l/quickbills-pro"
                 html_button = f"""
                     <a href="{checkout_url}" target="_blank" style="
                         display: inline-flex;
@@ -1056,7 +1056,7 @@ def main():
                             <span style="color: #10b981; margin-right: 0.75rem;">✔</span> 24/7 Priority Support
                         </li>
                     </ul>
-                    <a href="https://tyzclj.gumroad.com/l/quickbills" target="_blank" style="
+                    <a href="https://tyzclj.gumroad.com/l/quickbills-pro" target="_blank" style="
                         display: block;
                         background: #3b82f6;
                         color: white;
