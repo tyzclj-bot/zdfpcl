@@ -567,6 +567,10 @@ def main():
                     license_key = profile.get("license_key")
                     st.session_state.is_pro = bool(license_key and verify_gumroad_license(license_key)[0])
                 
+                # If Pro user, ensure they have "infinite" credits in session state
+                if st.session_state.is_pro:
+                    st.session_state.credits = 9999
+                
                 # --- 状态 A：Pro | 状态 B：非 Pro（严格隔离）---
                 if st.session_state.is_pro:
                     st.success("✅ Pro 订阅已激活")
@@ -952,7 +956,7 @@ def main():
         # DASHBOARD VIEW (Logged In)
         
         # Check Credits Logic
-        if st.session_state.credits <= 0:
+        if not st.session_state.get("is_pro", False) and st.session_state.credits <= 0:
             st.warning("⚠️ You have 0 credits remaining. Please upgrade your plan to continue parsing invoices.")
             st.info("New users get 5 free credits.")
             return
@@ -978,11 +982,11 @@ def main():
                     if process_disabled:
                         st.warning("🔒 请在侧边栏输入 Gumroad Pro 秘钥以解锁 AI 解析")
                     if st.button("🤖 Process with AI", disabled=process_disabled):
-                        # Double check credits before processing
+                        # Double check credits before processing (Only for Non-Pro)
                         supabase = init_supabase()
                         credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
                         
-                        if credits <= 0:
+                        if not st.session_state.get("is_pro", False) and credits <= 0:
                             st.error("Insufficient credits!")
                             return
 
@@ -1049,13 +1053,14 @@ def main():
                                     st.session_state['invoice_data'] = data
                                     st.session_state['processed'] = True
                                     
-                                    # --- SUCCESS: Deduct Credit & Log History ---
+                                    # --- SUCCESS: Deduct Credit (Only for Non-Pro) & Log History ---
                                     try:
-                                        supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                        if not st.session_state.get("is_pro", False):
+                                            supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                            st.session_state.credits -= 1
+                                            st.toast("Credits deducted: -1", icon="💳")
+                                        
                                         supabase.log_invoice(st.session_state.user.id, data, st.session_state.access_token)
-                                        st.toast("Credits deducted: -1", icon="💳")
-                                        # Update local state to reflect change immediately
-                                        st.session_state.credits -= 1
                                     except Exception as db_err:
                                         st.warning(f"Result processed but failed to update DB: {db_err}")
                                 

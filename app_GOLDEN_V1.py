@@ -665,6 +665,11 @@ def main():
                 profile = supabase.get_user_profile(st.session_state.user.id, st.session_state.access_token)
                 st.session_state.credits = profile.get("credits", 0)
                 plan_status = profile.get("plan", "free")
+                st.session_state.plan_status = plan_status # Store in session state for global access
+                
+                # If Pro user, ensure they have "infinite" credits in session state
+                if plan_status == 'pro':
+                    st.session_state.credits = 9999
                 
                 # Credits Display with Top Up
                 c1, c2 = st.columns([2, 1])
@@ -676,7 +681,7 @@ def main():
                     else:
                          st.markdown('<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:12px; font-weight:bold;">FREE</span>', unsafe_allow_html=True)
 
-                if st.session_state.credits <= 0:
+                if plan_status != 'pro' and st.session_state.credits <= 0:
                     st.warning("⚠️ **Out of Credits:** Upgrade to Pro for unlimited processing and advanced features.")
                     # Lemon Squeezy Checkout URL
                     gumroad_pro_url = "https://tyzclj.gumroad.com/l/hrnxoe"
@@ -1122,7 +1127,7 @@ def main():
         # DASHBOARD VIEW (Logged In)
         
         # Check Credits Logic
-        if st.session_state.credits <= 0:
+        if st.session_state.get('plan_status', 'free') != 'pro' and st.session_state.credits <= 0:
             st.warning("⚠️ You have 0 credits remaining. Please upgrade your plan to continue parsing invoices.")
             st.info("New users get 5 free credits.")
             return
@@ -1153,11 +1158,11 @@ def main():
                         st.success(f"PDF file '{uploaded_file.name}' uploaded successfully!")
 
                     if st.button("🤖 Process with AI"):
-                        # Double check credits before processing
+                        # Double check credits before processing (Only for Non-Pro)
                         supabase = init_supabase()
                         credits = supabase.get_user_credits(st.session_state.user.id, st.session_state.access_token)
                         
-                        if credits <= 0:
+                        if st.session_state.get('plan_status', 'free') != 'pro' and credits <= 0:
                             st.error("Insufficient credits!")
                             return
 
@@ -1224,13 +1229,14 @@ def main():
                                     st.session_state['invoice_data'] = data
                                     st.session_state['processed'] = True
                                     
-                                    # --- SUCCESS: Deduct Credit & Log History ---
+                                    # --- SUCCESS: Deduct Credit (Only for Non-Pro) & Log History ---
                                     try:
-                                        supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                        if st.session_state.get('plan_status', 'free') != 'pro':
+                                            supabase.decrement_credits(st.session_state.user.id, st.session_state.access_token)
+                                            st.session_state.credits -= 1
+                                            st.toast("Credits deducted: -1", icon="💳")
+                                        
                                         supabase.log_invoice(st.session_state.user.id, data, st.session_state.access_token)
-                                        st.toast("Credits deducted: -1", icon="💳")
-                                        # Update local state to reflect change immediately
-                                        st.session_state.credits -= 1
                                     except Exception as db_err:
                                         st.warning(f"Result processed but failed to update DB: {db_err}")
                                 
