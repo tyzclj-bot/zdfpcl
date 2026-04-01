@@ -1526,7 +1526,7 @@ def main():
     # --- Global Site Footer ---
     st.markdown("""
         <div style="text-align: center; margin-top: 4rem; margin-bottom: 2rem; color: #94a3b8; font-size: 0.85rem; border-top: 1px solid #f1f5f9; padding-top: 2rem;">
-            <p style="margin-bottom: 0.5rem;">&copy; 2025 QuickBills AI. All rights reserved.</p>
+            <p style="margin-bottom: 0.5rem;">&copy; 2024 QuickBills AI. All rights reserved.</p>
             <div style="display: flex; justify-content: center; gap: 1.5rem;">
                  <a href="?nav=privacy" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Privacy Policy</a>
                  <a href="?nav=terms" style="color: #64748b; text-decoration: none; transition: color 0.2s;" target="_self">Terms of Service</a>

@@ -573,7 +573,7 @@ def main():
                 
                 # --- 状态 A：Pro | 状态 B：非 Pro（严格隔离）---
                 if st.session_state.is_pro:
-                    st.success("✅ Pro 订阅已激活")
+                    st.success("✅ Pro Subscription Active")
                 else:
                     st.link_button("🌟 Upgrade to Pro - $19.99/mo", "https://tyzclj.gumroad.com/l/hrnxoe", use_container_width=True)
                     license_input = st.text_input("Enter your Gumroad License Key", key="gumroad_license_input", type="password")
@@ -1350,7 +1350,7 @@ def main():
     # --- Global Site Footer ---
     st.markdown("""
         <div style="text-align: center; margin-top: 4rem; margin-bottom: 2rem; color: #94a3b8; font-size: 0.85rem; border-top: 1px solid #f1f5f9; padding-top: 2rem;">
-            <p style="margin-bottom: 0.5rem;">&copy; 2026 QuickBills AI. All rights reserved.</p>
+            <p style="margin-bottom: 0.5rem;">&copy; 2024 QuickBills AI. All rights reserved.</p>
             <p style="margin: 0 0 0.75rem 0;">
                 By using QuickBills AI, you agree to our
                 <a href="https://flowery-tin-466.notion.site/QuickBills-AI-Legal-Center-31d603d9e4da800f8602fe8323638b81?pvs=143" style="color: #64748b; text-decoration: none;" target="_blank">Privacy Policy</a>
